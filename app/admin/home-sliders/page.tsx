@@ -1,0 +1,182 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+    Table,
+    Button,
+    Modal,
+    Form,
+    Input,
+    InputNumber,
+    Space,
+    message,
+    Typography,
+    Image,
+    Popconfirm,
+} from 'antd';
+import {
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
+} from '@ant-design/icons';
+import useSWR from 'swr';
+import axios from 'axios';
+
+const { Title } = Typography;
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+interface Slider {
+    slider_id: number;
+    image_url: string;
+    display_order: number;
+    created_at: string;
+}
+
+export default function HomeSlidersPage() {
+    const { data, error, mutate } = useSWR<Slider[]>('/api/admin/homeslider', fetcher);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingSlider, setEditingSlider] = useState<Slider | null>(null);
+    const [form] = Form.useForm();
+
+    const showModal = (slider?: Slider) => {
+        if (slider) {
+            setEditingSlider(slider);
+            form.setFieldsValue(slider);
+        } else {
+            setEditingSlider(null);
+            form.resetFields();
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleOk = async () => {
+        try {
+            const values = await form.validateFields();
+
+            if (editingSlider) {
+                await axios.put('/api/admin/homeslider', {
+                    slider_id: editingSlider.slider_id,
+                    ...values,
+                });
+                message.success('Slider updated successfully!');
+            } else {
+                await axios.post('/api/admin/homeslider', values);
+                message.success('Slider created successfully!');
+            }
+
+            mutate();
+            setIsModalOpen(false);
+            form.resetFields();
+        } catch (error) {
+            message.error('Operation failed!');
+        }
+    };
+
+    const handleDelete = async (slider_id: number) => {
+        try {
+            await axios.delete('/api/admin/homeslider', { data: { slider_id } });
+            message.success('Slider deleted successfully!');
+            mutate();
+        } catch (error) {
+            message.error('Delete failed!');
+        }
+    };
+
+    const columns = [
+        {
+            title: 'ID',
+            dataIndex: 'slider_id',
+            key: 'slider_id',
+            width: 70,
+        },
+        {
+            title: 'Image',
+            dataIndex: 'image_url',
+            key: 'image_url',
+            width: 200,
+            render: (url: string) => (
+                <Image src={url} alt="Slider" width={150} height={80} style={{ objectFit: 'cover' }} />
+            ),
+        },
+        {
+            title: 'Display Order',
+            dataIndex: 'display_order',
+            key: 'display_order',
+            width: 150,
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            width: 150,
+            render: (_: any, record: Slider) => (
+                <Space>
+                    <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => showModal(record)}
+                    />
+                    <Popconfirm
+                        title="Delete this slider?"
+                        onConfirm={() => handleDelete(record.slider_id)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Button danger icon={<DeleteOutlined />} size="small" />
+                    </Popconfirm>
+                </Space>
+            ),
+        },
+    ];
+
+    if (error) return <div>Failed to load</div>;
+    if (!data) return <div>Loading...</div>;
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Title level={2}>Home Sliders Management</Title>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+                    Add Slider
+                </Button>
+            </div>
+
+            <Table
+                columns={columns}
+                dataSource={data}
+                rowKey="slider_id"
+                pagination={{ pageSize: 10 }}
+            />
+
+            <Modal
+                title={editingSlider ? 'Edit Slider' : 'Add Slider'}
+                open={isModalOpen}
+                onOk={handleOk}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    form.resetFields();
+                }}
+                width={600}
+            >
+                <Form form={form} layout="vertical">
+                    <Form.Item
+                        label="Image URL"
+                        name="image_url"
+                        rules={[{ required: true, message: 'Please input image URL!' }]}
+                    >
+                        <Input.TextArea rows={3} placeholder="/uploads/home/slider1.jpg" />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Display Order"
+                        name="display_order"
+                        rules={[{ required: true, message: 'Please input display order!' }]}
+                    >
+                        <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+}
