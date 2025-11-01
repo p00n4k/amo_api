@@ -14,18 +14,19 @@ import {
     Popconfirm,
     List,
     Image,
+    Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     PictureOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface ProductMain {
@@ -55,6 +56,7 @@ export default function ProductMainPage() {
     const [mainImages, setMainImages] = useState<MainImage[]>([]);
     const [form] = Form.useForm();
     const [imageForm] = Form.useForm();
+    const [uploading, setUploading] = useState(false);
 
     const showModal = (main?: ProductMain) => {
         if (main) {
@@ -101,6 +103,30 @@ export default function ProductMainPage() {
         }
     };
 
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const filePath = res.data?.filePath;
+            if (filePath) {
+                imageForm.setFieldValue('image_url', filePath);
+                message.success('Upload successful!');
+            } else {
+                message.error('No file path returned!');
+            }
+            setUploading(false);
+        } catch (error) {
+            message.error('Upload failed!');
+            setUploading(false);
+        }
+    };
+
     const handleAddImage = async () => {
         try {
             const values = await imageForm.validateFields();
@@ -111,6 +137,7 @@ export default function ProductMainPage() {
             });
             message.success('Image added successfully!');
             imageForm.resetFields();
+
             if (selectedMain) {
                 const response = await axios.get(`/api/admin/productmain?id=${selectedMain}`);
                 setMainImages(response.data.images || []);
@@ -123,7 +150,7 @@ export default function ProductMainPage() {
     const handleDeleteImage = async (image_id: number) => {
         try {
             await axios.delete('/api/admin/productmain', {
-                data: { image_id, action: 'delete_image' }
+                data: { image_id, action: 'delete_image' },
             });
             message.success('Image deleted successfully!');
             if (selectedMain) {
@@ -224,6 +251,7 @@ export default function ProductMainPage() {
                 scroll={{ x: 1000 }}
             />
 
+            {/* ✅ Modal: Add/Edit Product Main */}
             <Modal
                 title={editingMain ? 'Edit Product Main' : 'Add Product Main'}
                 open={isModalOpen}
@@ -235,7 +263,11 @@ export default function ProductMainPage() {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="Collection Name" name="collection_name" rules={[{ required: true }]}>
+                    <Form.Item
+                        label="Collection Name"
+                        name="collection_name"
+                        rules={[{ required: true }]}
+                    >
                         <Input />
                     </Form.Item>
 
@@ -255,6 +287,7 @@ export default function ProductMainPage() {
                 </Form>
             </Modal>
 
+            {/* ✅ Modal: Manage Images with Upload */}
             <Modal
                 title="Manage Main Images"
                 open={isImageModalOpen}
@@ -262,16 +295,52 @@ export default function ProductMainPage() {
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
-                    <Form.Item name="image_url" rules={[{ required: true, message: 'Please input image URL!' }]} style={{ width: '60%' }}>
-                        <Input placeholder="Image URL" />
+                <Form
+                    form={imageForm}
+                    layout="inline"
+                    onFinish={handleAddImage}
+                    style={{ marginBottom: 16 }}
+                >
+                    <Form.Item
+                        name="image_url"
+                        rules={[{ required: true, message: 'Please upload an image!' }]}
+                        style={{ width: '60%' }}
+                    >
+                        <Upload
+                            name="file"
+                            showUploadList={false}
+                            customRequest={async ({ file, onSuccess }) => {
+                                await handleUpload(file as File);
+                                onSuccess && onSuccess('ok');
+                            }}
+                        >
+                            <Button
+                                icon={<UploadOutlined />}
+                                loading={uploading}
+                            >
+                                Upload Image
+                            </Button>
+                        </Upload>
                     </Form.Item>
+
                     <Form.Item>
-                        <Button type="primary" onClick={handleAddImage}>
+                        <Button type="primary" htmlType="submit">
                             Add
                         </Button>
                     </Form.Item>
                 </Form>
+
+                {/* ✅ Preview */}
+                {imageForm.getFieldValue('image_url') && (
+                    <div style={{ marginBottom: 16 }}>
+                        <Image
+                            src={imageForm.getFieldValue('image_url')}
+                            alt="Preview"
+                            width={200}
+                            style={{ borderRadius: 4 }}
+                        />
+                    </div>
+                )}
 
                 <List
                     grid={{ gutter: 16, column: 3 }}
@@ -280,7 +349,14 @@ export default function ProductMainPage() {
                         <List.Item>
                             <div style={{ position: 'relative' }}>
                                 <Image src={item.image_url} alt="Main" style={{ width: '100%' }} />
-                                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div
+                                    style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                    }}
+                                >
                                     <Popconfirm
                                         title="Delete this image?"
                                         onConfirm={() => handleDeleteImage(item.image_id)}
