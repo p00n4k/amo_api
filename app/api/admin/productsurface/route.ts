@@ -1,90 +1,100 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-// ✅ GET
+// 🟢 GET
 export async function GET() {
   try {
     const connection = await getConnection();
     const [rows]: any = await connection.query(`
       SELECT item_id, image, link
-      FROM product_furnish_items
+      FROM product_surface_items
       ORDER BY item_id DESC
     `);
     await connection.end();
     return NextResponse.json(rows);
   } catch (error: any) {
-    console.error("GET /productfurnish error:", error);
+    console.error("GET /admin/productsurface error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ POST
+// 🟡 POST
 export async function POST(req: Request) {
   try {
     const { image, link } = await req.json();
-    if (!image || !link)
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+
+    if (!image || !link) {
+      return NextResponse.json(
+        { error: "Missing image or link" },
+        { status: 400 }
+      );
+    }
 
     const connection = await getConnection();
-    await connection.execute(
-      `
-      INSERT INTO product_furnish_items (image, link)
-      VALUES (?, ?)
-      `,
+    await connection.query(
+      `INSERT INTO product_surface_items (image, link) VALUES (?, ?)`,
       [image, link]
     );
     await connection.end();
 
-    return NextResponse.json({ message: "Furnish item added successfully" });
+    return NextResponse.json({ message: "Surface item added successfully" });
   } catch (error: any) {
-    console.error("POST /productfurnish error:", error);
+    console.error("POST /admin/productsurface error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ PUT
+// 🟠 PUT
 export async function PUT(req: Request) {
   try {
     const { item_id, image, link } = await req.json();
-    if (!item_id)
-      return NextResponse.json({ error: "Missing item_id" }, { status: 400 });
+
+    if (!item_id) {
+      return NextResponse.json(
+        { error: "Missing item_id" },
+        { status: 400 }
+      );
+    }
 
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `
-      UPDATE product_furnish_items
-      SET image = COALESCE(?, image),
-          link = COALESCE(?, link)
+      UPDATE product_surface_items
+      SET 
+        image = COALESCE(?, image),
+        link = COALESCE(?, link)
       WHERE item_id = ?
       `,
       [image, link, item_id]
     );
     await connection.end();
 
-    return NextResponse.json({ message: "Furnish item updated successfully" });
+    return NextResponse.json({ message: "Surface item updated successfully" });
   } catch (error: any) {
-    console.error("PUT /productfurnish error:", error);
+    console.error("PUT /admin/productsurface error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ DELETE
+// 🔴 DELETE
 export async function DELETE(req: Request) {
   try {
     const { item_id } = await req.json();
-    if (!item_id)
+
+    if (!item_id) {
       return NextResponse.json({ error: "Missing item_id" }, { status: 400 });
+    }
 
     const connection = await getConnection();
-    await connection.execute(
-      `DELETE FROM product_furnish_items WHERE item_id = ?`,
+    await connection.query(
+      `DELETE FROM product_surface_items WHERE item_id = ?`,
       [item_id]
     );
     await connection.end();
 
-    return NextResponse.json({ message: "Furnish item deleted successfully" });
+    return NextResponse.json({ message: "Surface item deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /productfurnish error:", error);
+    console.error("DELETE /admin/productsurface error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

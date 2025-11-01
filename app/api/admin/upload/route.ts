@@ -1,49 +1,38 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
-import { writeFile } from "fs/promises";
+import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
+// 📤 POST — Upload File
 export async function POST(req: Request) {
   try {
-    // รับไฟล์จาก formdata
     const formData = await req.formData();
     const file = formData.get("file") as File;
+
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // ตั้งชื่อไฟล์ใหม่แบบ unique
+    // ✅ ตั้งโฟลเดอร์เก็บรูป
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "surface");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // ✅ ตั้งชื่อไฟล์ใหม่ (UUID)
+    const ext = path.extname(file.name);
+    const fileName = `${uuidv4()}${ext}`;
+    const filePath = path.join(uploadDir, fileName);
+
+    // ✅ เขียนไฟล์จริงลงในโฟลเดอร์ public/uploads/surface
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = `${uuidv4()}_${file.name}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "brands");
-    const filePath = path.join(uploadDir, filename);
-    const fileUrl = `/uploads/brands/${filename}`;
+    fs.writeFileSync(filePath, buffer);
 
-    // สร้างโฟลเดอร์ถ้ายังไม่มี
-    await writeFile(filePath, buffer);
-
-    // ✅ บันทึกลงฐานข้อมูลทันที
-    const connection = await getConnection();
-    await connection.query(
-      `INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        "Uploaded Brand", // หรือจะรับค่าเพิ่มเติมจาก formData ได้
-        fileUrl,
-        "Surface",
-        "Unknown",
-        "https://amo.co.th",
-      ]
-    );
-
-    return NextResponse.json({
-      success: true,
-      filePath: fileUrl,
-      message: "File uploaded and saved to database successfully",
-    });
+    // ✅ คืนค่า path (ไม่ต้องมี /public)
+    const publicPath = `/uploads/surface/${fileName}`;
+    return NextResponse.json({ filePath: publicPath });
   } catch (error: any) {
-    console.error("❌ Upload error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Upload error:", error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

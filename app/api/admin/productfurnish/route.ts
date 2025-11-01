@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-// ✅ GET
+// 🟢 GET — ดึงรายการทั้งหมด
 export async function GET() {
   try {
     const connection = await getConnection();
@@ -13,20 +13,24 @@ export async function GET() {
     await connection.end();
     return NextResponse.json(rows);
   } catch (error: any) {
-    console.error("GET /productfurnish error:", error);
+    console.error("GET /admin/productfurnish error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ POST
+// 🟡 POST — เพิ่มรายการใหม่
 export async function POST(req: Request) {
   try {
     const { image, link } = await req.json();
+
     if (!image || !link)
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
 
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `
       INSERT INTO product_furnish_items (image, link)
       VALUES (?, ?)
@@ -37,20 +41,24 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: "Furnish item added successfully" });
   } catch (error: any) {
-    console.error("POST /productfurnish error:", error);
+    console.error("POST /admin/productfurnish error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ PUT
+// 🟠 PUT — แก้ไขข้อมูล
 export async function PUT(req: Request) {
   try {
     const { item_id, image, link } = await req.json();
+
     if (!item_id)
-      return NextResponse.json({ error: "Missing item_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing item_id" },
+        { status: 400 }
+      );
 
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `
       UPDATE product_furnish_items
       SET image = COALESCE(?, image),
@@ -63,20 +71,24 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ message: "Furnish item updated successfully" });
   } catch (error: any) {
-    console.error("PUT /productfurnish error:", error);
+    console.error("PUT /admin/productfurnish error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ DELETE
+// 🔴 DELETE — ลบข้อมูล
 export async function DELETE(req: Request) {
   try {
     const { item_id } = await req.json();
+
     if (!item_id)
-      return NextResponse.json({ error: "Missing item_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing item_id" },
+        { status: 400 }
+      );
 
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `DELETE FROM product_furnish_items WHERE item_id = ?`,
       [item_id]
     );
@@ -84,7 +96,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ message: "Furnish item deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /productfurnish error:", error);
+    console.error("DELETE /admin/productfurnish error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
