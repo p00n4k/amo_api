@@ -165,7 +165,7 @@ export default function HomeSlidersPage() {
                         name="image_url"
                         rules={[{ required: true, message: 'Please input image URL!' }]}
                     >
-                        <Input.TextArea rows={3} placeholder="/uploads/home/slider1.jpg" />
+                        <Input placeholder="/uploads/home/sample.jpg" />
                     </Form.Item>
 
                     <Form.Item

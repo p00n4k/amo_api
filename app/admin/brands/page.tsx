@@ -14,7 +14,6 @@ import {
     Image,
     Popconfirm,
     Upload,
-    Tag,
 } from 'antd';
 import {
     PlusOutlined,
@@ -26,7 +25,6 @@ import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Brand {
@@ -36,7 +34,6 @@ interface Brand {
     main_type: 'Surface' | 'Furnishing';
     type: string;
     brand_url: string;
-    created_at: string;
 }
 
 export default function BrandsPage() {
@@ -46,20 +43,21 @@ export default function BrandsPage() {
     const [form] = Form.useForm();
     const [uploading, setUploading] = useState(false);
 
+    // ✅ ใช้ upload แทน URL
     const handleUpload = async (file: File) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
             setUploading(true);
-            const response = await axios.post('/api/admin/upload', formData);
-            message.success('Upload successful!');
-            return response.data.url;
-        } catch (error) {
-            message.error('Upload failed!');
-            return null;
-        } finally {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
             setUploading(false);
+            return res.data.filePath; // คืน path ที่อัปโหลดเสร็จ
+        } catch {
+            message.error('Upload failed!');
+            setUploading(false);
+            return '';
         }
     };
 
@@ -77,7 +75,6 @@ export default function BrandsPage() {
     const handleOk = async () => {
         try {
             const values = await form.validateFields();
-
             if (editingBrand) {
                 await axios.put('/api/admin/brand', {
                     brand_id: editingBrand.brand_id,
@@ -88,11 +85,10 @@ export default function BrandsPage() {
                 await axios.post('/api/admin/brand', values);
                 message.success('Brand created successfully!');
             }
-
             mutate();
             setIsModalOpen(false);
             form.resetFields();
-        } catch (error) {
+        } catch {
             message.error('Operation failed!');
         }
     };
@@ -102,7 +98,7 @@ export default function BrandsPage() {
             await axios.delete('/api/admin/brand', { data: { brand_id } });
             message.success('Brand deleted successfully!');
             mutate();
-        } catch (error) {
+        } catch {
             message.error('Delete failed!');
         }
     };
@@ -118,9 +114,8 @@ export default function BrandsPage() {
             title: 'Image',
             dataIndex: 'brand_image',
             key: 'brand_image',
-            width: 100,
             render: (url: string) => (
-                <Image src={url} alt="Brand" width={60} height={40} style={{ objectFit: 'cover' }} />
+                <Image src={url} alt="Brand" width={70} height={50} style={{ objectFit: 'cover' }} />
             ),
         },
         {
@@ -132,9 +127,6 @@ export default function BrandsPage() {
             title: 'Main Type',
             dataIndex: 'main_type',
             key: 'main_type',
-            render: (type: string) => (
-                <Tag color={type === 'Surface' ? 'blue' : 'green'}>{type}</Tag>
-            ),
         },
         {
             title: 'Type',
@@ -146,9 +138,7 @@ export default function BrandsPage() {
             dataIndex: 'brand_url',
             key: 'brand_url',
             render: (url: string) => (
-                <a href={url} target="_blank" rel="noopener noreferrer">
-                    {url}
-                </a>
+                <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
             ),
         },
         {
@@ -178,8 +168,6 @@ export default function BrandsPage() {
 
     if (error) return <div>Failed to load</div>;
     if (!data) return <div>Loading...</div>;
-
-    // Ensure data is an array
     const brands = Array.isArray(data) ? data : [];
 
     return (
@@ -191,12 +179,7 @@ export default function BrandsPage() {
                 </Button>
             </div>
 
-            <Table
-                columns={columns}
-                dataSource={brands}
-                rowKey="brand_id"
-                pagination={{ pageSize: 10 }}
-            />
+            <Table columns={columns} dataSource={brands} rowKey="brand_id" pagination={{ pageSize: 10 }} />
 
             <Modal
                 title={editingBrand ? 'Edit Brand' : 'Add Brand'}
@@ -217,12 +200,29 @@ export default function BrandsPage() {
                         <Input />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Brand Image URL"
-                        name="brand_image"
-                        rules={[{ required: true, message: 'Please input image URL!' }]}
-                    >
-                        <Input.TextArea rows={2} />
+                    <Form.Item label="Brand Image" name="brand_image" rules={[{ required: true }]}>
+                        <Upload
+                            name="file"
+                            listType="picture"
+                            customRequest={async ({ file, onSuccess }) => {
+                                const path = await handleUpload(file as File);
+                                form.setFieldValue('brand_image', path);
+                                onSuccess && onSuccess('ok');
+                            }}
+                            showUploadList={false}
+                        >
+                            <Button icon={<UploadOutlined />} loading={uploading}>
+                                Upload Image
+                            </Button>
+                        </Upload>
+                        {form.getFieldValue('brand_image') && (
+                            <Image
+                                src={form.getFieldValue('brand_image')}
+                                alt="Preview"
+                                width={120}
+                                style={{ marginTop: 10, borderRadius: 4 }}
+                            />
+                        )}
                     </Form.Item>
 
                     <Form.Item
@@ -236,12 +236,8 @@ export default function BrandsPage() {
                         </Select>
                     </Form.Item>
 
-                    <Form.Item
-                        label="Type"
-                        name="type"
-                        rules={[{ required: true, message: 'Please input type!' }]}
-                    >
-                        <Input placeholder="e.g., Wood, Metal, Ceramic" />
+                    <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+                        <Input placeholder="e.g., Porcelain, Ceramic, Wood" />
                     </Form.Item>
 
                     <Form.Item
@@ -249,7 +245,7 @@ export default function BrandsPage() {
                         name="brand_url"
                         rules={[{ required: true, message: 'Please input brand URL!' }]}
                     >
-                        <Input placeholder="https://example.com" />
+                        <Input placeholder="https://amo.co.th" />
                     </Form.Item>
                 </Form>
             </Modal>

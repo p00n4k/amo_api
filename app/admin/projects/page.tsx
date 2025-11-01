@@ -107,39 +107,6 @@ export default function ProjectsPage() {
         }
     };
 
-    const handleAddImage = async () => {
-        try {
-            const values = await imageForm.validateFields();
-            await axios.post('/api/admin/productimage', {
-                project_id: selectedProject,
-                ...values,
-            });
-            message.success('Image added successfully!');
-            imageForm.resetFields();
-            // Reload images
-            if (selectedProject) {
-                const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
-                setProjectImages(response.data.images || []);
-            }
-        } catch (error) {
-            message.error('Operation failed!');
-        }
-    };
-
-    const handleDeleteImage = async (image_id: number) => {
-        try {
-            await axios.delete('/api/admin/productimage', { data: { image_id } });
-            message.success('Image deleted successfully!');
-            // Reload images
-            if (selectedProject) {
-                const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
-                setProjectImages(response.data.images || []);
-            }
-        } catch (error) {
-            message.error('Delete failed!');
-        }
-    };
-
     const handleDelete = async (project_id: number) => {
         try {
             await axios.delete('/api/admin/project', { data: { project_id } });
@@ -147,6 +114,33 @@ export default function ProjectsPage() {
             mutate();
         } catch (error) {
             message.error('Delete failed!');
+        }
+    };
+
+    const handleAddImage = async () => {
+        try {
+            const values = await imageForm.validateFields();
+            await axios.post('/api/admin/projectimage', {
+                project_id: selectedProject,
+                ...values,
+            });
+            message.success('Image added successfully!');
+            const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
+            setProjectImages(response.data.images || []);
+            imageForm.resetFields();
+        } catch (error) {
+            message.error('Add image failed!');
+        }
+    };
+
+    const handleDeleteImage = async (image_id: number) => {
+        try {
+            await axios.delete('/api/admin/projectimage', { data: { image_id } });
+            message.success('Image deleted successfully!');
+            const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
+            setProjectImages(response.data.images || []);
+        } catch (error) {
+            message.error('Delete image failed!');
         }
     };
 
@@ -163,17 +157,16 @@ export default function ProjectsPage() {
             key: 'project_name',
         },
         {
-            title: 'Date Updated',
+            title: 'Date Update',
             dataIndex: 'data_update',
             key: 'data_update',
-            render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
         },
         {
             title: 'Category',
             dataIndex: 'project_category',
             key: 'project_category',
-            render: (category: string) => (
-                <Tag color={category === 'Residential' ? 'blue' : 'orange'}>{category}</Tag>
+            render: (cat: string) => (
+                <Tag color={cat === 'Residential' ? 'blue' : 'green'}>{cat}</Tag>
             ),
         },
         {
@@ -183,18 +176,18 @@ export default function ProjectsPage() {
             render: (_: any, record: Project) => (
                 <Space>
                     <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => showModal(record)}
+                    />
+                    <Button
                         icon={<PictureOutlined />}
                         size="small"
                         onClick={() => showImageModal(record.project_id)}
                     >
                         Images
                     </Button>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => showModal(record)}
-                    />
                     <Popconfirm
                         title="Delete this project?"
                         onConfirm={() => handleDelete(record.project_id)}
@@ -220,13 +213,9 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
-            <Table
-                columns={columns}
-                dataSource={data}
-                rowKey="project_id"
-                pagination={{ pageSize: 10 }}
-            />
+            <Table columns={columns} dataSource={data} rowKey="project_id" pagination={{ pageSize: 10 }} />
 
+            {/* Modal: Project Form */}
             <Modal
                 title={editingProject ? 'Edit Project' : 'Add Project'}
                 open={isModalOpen}
@@ -238,27 +227,15 @@ export default function ProjectsPage() {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="Project Name"
-                        name="project_name"
-                        rules={[{ required: true, message: 'Please input project name!' }]}
-                    >
+                    <Form.Item label="Project Name" name="project_name" rules={[{ required: true, message: 'Please input project name!' }]}>
                         <Input />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Date Updated"
-                        name="data_update"
-                        rules={[{ required: true, message: 'Please select date!' }]}
-                    >
-                        <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    <Form.Item label="Date Update" name="data_update" rules={[{ required: true, message: 'Please select date!' }]}>
+                        <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Category"
-                        name="project_category"
-                        rules={[{ required: true, message: 'Please select category!' }]}
-                    >
+                    <Form.Item label="Category" name="project_category" rules={[{ required: true, message: 'Please select category!' }]}>
                         <Select>
                             <Select.Option value="Residential">Residential</Select.Option>
                             <Select.Option value="Commercial">Commercial</Select.Option>
@@ -267,14 +244,15 @@ export default function ProjectsPage() {
                 </Form>
             </Modal>
 
+            {/* Modal: Manage Project Images */}
             <Modal
-                title="Project Images"
+                title="Manage Project Images"
                 open={isImageModalOpen}
                 onCancel={() => setIsImageModalOpen(false)}
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" style={{ marginBottom: 16 }}>
+                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
                     <Form.Item
                         name="image_url"
                         rules={[{ required: true, message: 'Please input image URL!' }]}

@@ -235,50 +235,35 @@ export default function ProductMainPage() {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="Collection Name"
-                        name="collection_name"
-                        rules={[{ required: true, message: 'Please input collection name!' }]}
-                    >
+                    <Form.Item label="Collection Name" name="collection_name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Brand"
-                        name="brand_id"
-                        rules={[{ required: true, message: 'Please select brand!' }]}
-                    >
-                        <Select placeholder="Select a brand">
-                            {brands?.map((brand) => (
-                                <Select.Option key={brand.brand_id} value={brand.brand_id}>
-                                    {brand.brand_name}
+                    <Form.Item label="Brand" name="brand_name" rules={[{ required: true }]}>
+                        <Select placeholder="Select Brand">
+                            {brands?.map((b) => (
+                                <Select.Option key={b.brand_id} value={b.brand_name}>
+                                    {b.brand_name}
                                 </Select.Option>
                             ))}
                         </Select>
                     </Form.Item>
 
-                    <Form.Item
-                        label="Link"
-                        name="link"
-                    >
-                        <Input placeholder="https://example.com/..." />
+                    <Form.Item label="Link" name="link">
+                        <Input placeholder="https://example.com" />
                     </Form.Item>
                 </Form>
             </Modal>
 
             <Modal
-                title="Product Main Images"
+                title="Manage Main Images"
                 open={isImageModalOpen}
                 onCancel={() => setIsImageModalOpen(false)}
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" style={{ marginBottom: 16 }}>
-                    <Form.Item
-                        name="image_url"
-                        rules={[{ required: true, message: 'Please input image URL!' }]}
-                        style={{ width: '80%' }}
-                    >
+                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
+                    <Form.Item name="image_url" rules={[{ required: true, message: 'Please input image URL!' }]} style={{ width: '60%' }}>
                         <Input placeholder="Image URL" />
                     </Form.Item>
                     <Form.Item>
@@ -295,7 +280,7 @@ export default function ProductMainPage() {
                         <List.Item>
                             <div style={{ position: 'relative' }}>
                                 <Image src={item.image_url} alt="Main" style={{ width: '100%' }} />
-                                <div style={{ marginTop: 8, textAlign: 'right' }}>
+                                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Popconfirm
                                         title="Delete this image?"
                                         onConfirm={() => handleDeleteImage(item.image_id)}

@@ -69,7 +69,7 @@ export default function CollectionsPage() {
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingCollection) {
         await axios.put('/api/admin/collection', {
           collection_id: editingCollection.collection_id,
@@ -138,15 +138,12 @@ export default function CollectionsPage() {
       dataIndex: 'status',
       key: 'status',
       render: (status: boolean) => (
-        <Tag color={status ? 'success' : 'default'}>
-          {status ? 'Active' : 'Inactive'}
-        </Tag>
+        <Tag color={status ? 'green' : 'volcano'}>{status ? 'Available' : 'Not Available'}</Tag>
       ),
     },
     {
       title: 'Actions',
       key: 'actions',
-      width: 150,
       render: (_: any, record: Collection) => (
         <Space>
           <Button
@@ -180,13 +177,7 @@ export default function CollectionsPage() {
         </Button>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="collection_id"
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: 1000 }}
-      />
+      <Table columns={columns} dataSource={data} rowKey="collection_id" pagination={{ pageSize: 10 }} />
 
       <Modal
         title={editingCollection ? 'Edit Collection' : 'Add Collection'}
@@ -196,7 +187,7 @@ export default function CollectionsPage() {
           setIsModalOpen(false);
           form.resetFields();
         }}
-        width={700}
+        width={600}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -204,7 +195,7 @@ export default function CollectionsPage() {
             name="type"
             rules={[{ required: true, message: 'Please input type!' }]}
           >
-            <Input placeholder="e.g., Marble White, Oak Natural" />
+            <Input />
           </Form.Item>
 
           <Form.Item
@@ -212,7 +203,7 @@ export default function CollectionsPage() {
             name="brand_id"
             rules={[{ required: true, message: 'Please select brand!' }]}
           >
-            <Select placeholder="Select a brand">
+            <Select>
               {brands?.map((brand) => (
                 <Select.Option key={brand.brand_id} value={brand.brand_id}>
                   {brand.brand_name}
@@ -232,40 +223,28 @@ export default function CollectionsPage() {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="Status"
-            name="status"
-            valuePropName="checked"
-          >
-            <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+          <Form.Item label="Status" name="status" valuePropName="checked">
+            <Switch />
           </Form.Item>
 
-          <Form.Item
-            label="Description"
-            name="description"
-          >
+          <Form.Item label="Description" name="description">
             <TextArea rows={3} />
           </Form.Item>
 
           <Form.Item
             label="Image URL"
             name="image"
+            rules={[{ required: true, message: 'Please input image URL!' }]}
           >
-            <Input placeholder="/uploads/products/..." />
+            <Input placeholder="/uploads/products/sample.jpg" />
           </Form.Item>
 
-          <Form.Item
-            label="Link"
-            name="link"
-          >
-            <Input placeholder="https://example.com/products/..." />
+          <Form.Item label="Link" name="link">
+            <Input placeholder="https://example.com/product" />
           </Form.Item>
 
-          <Form.Item
-            label="Related Link"
-            name="relate_link"
-          >
-            <Input placeholder="https://example.com/related/..." />
+          <Form.Item label="Relate Link" name="relate_link">
+            <Input placeholder="https://example.com/related" />
           </Form.Item>
         </Form>
       </Modal>

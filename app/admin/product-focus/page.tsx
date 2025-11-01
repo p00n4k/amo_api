@@ -128,9 +128,7 @@ export default function ProductFocusPage() {
 
     const handleDeleteImage = async (image_id: number) => {
         try {
-            await axios.delete('/api/admin/homefocus', {
-                data: { image_id, action: 'delete_image' }
-            });
+            await axios.delete('/api/admin/homefocus', { data: { image_id, action: 'delete_image' } });
             message.success('Image deleted successfully!');
             if (selectedFocus) {
                 const response = await axios.get(`/api/admin/homefocus?focus_id=${selectedFocus}`);
@@ -144,7 +142,7 @@ export default function ProductFocusPage() {
     const handleDelete = async (focus_id: number) => {
         try {
             await axios.delete('/api/admin/homefocus', { data: { focus_id } });
-            message.success('Product Focus deleted successfully!');
+            message.success('Deleted successfully!');
             mutate();
         } catch (error) {
             message.error('Delete failed!');
@@ -159,7 +157,7 @@ export default function ProductFocusPage() {
             width: 70,
         },
         {
-            title: 'Collection Name',
+            title: 'Collection',
             dataIndex: 'collection_name',
             key: 'collection_name',
         },
@@ -167,11 +165,6 @@ export default function ProductFocusPage() {
             title: 'Brand',
             dataIndex: 'brand_name',
             key: 'brand_name',
-        },
-        {
-            title: 'Made In',
-            dataIndex: 'made_in',
-            key: 'made_in',
         },
         {
             title: 'Type',
@@ -188,20 +181,20 @@ export default function ProductFocusPage() {
             render: (_: any, record: ProductFocus) => (
                 <Space>
                     <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => showModal(record)}
+                    />
+                    <Button
                         icon={<PictureOutlined />}
                         size="small"
                         onClick={() => showImageModal(record.focus_id)}
                     >
                         Images
                     </Button>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => showModal(record)}
-                    />
                     <Popconfirm
-                        title="Delete this product focus?"
+                        title="Delete this focus?"
                         onConfirm={() => handleDelete(record.focus_id)}
                         okText="Yes"
                         cancelText="No"
@@ -225,14 +218,9 @@ export default function ProductFocusPage() {
                 </Button>
             </div>
 
-            <Table
-                columns={columns}
-                dataSource={data}
-                rowKey="focus_id"
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: 1000 }}
-            />
+            <Table columns={columns} dataSource={data} rowKey="focus_id" pagination={{ pageSize: 10 }} />
 
+            {/* Modal: Add/Edit Focus */}
             <Modal
                 title={editingFocus ? 'Edit Product Focus' : 'Add Product Focus'}
                 open={isModalOpen}
@@ -241,91 +229,61 @@ export default function ProductFocusPage() {
                     setIsModalOpen(false);
                     form.resetFields();
                 }}
-                width={700}
+                width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="Collection Name"
-                        name="collection_name"
-                        rules={[{ required: true, message: 'Please input collection name!' }]}
-                    >
+                    <Form.Item label="Collection Name" name="collection_name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Brand"
-                        name="brand_id"
-                        rules={[{ required: true, message: 'Please select brand!' }]}
-                    >
-                        <Select placeholder="Select a brand">
-                            {brands?.map((brand) => (
-                                <Select.Option key={brand.brand_id} value={brand.brand_id}>
-                                    {brand.brand_name}
+                    <Form.Item label="Brand Name" name="brand_name" rules={[{ required: true }]}>
+                        <Select placeholder="Select Brand">
+                            {brands?.map((b) => (
+                                <Select.Option key={b.brand_id} value={b.brand_name}>
+                                    {b.brand_name}
                                 </Select.Option>
                             ))}
                         </Select>
                     </Form.Item>
 
-                    <Form.Item
-                        label="Description"
-                        name="description"
-                    >
+                    <Form.Item label="Description" name="description">
                         <TextArea rows={3} />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Made In"
-                        name="made_in"
-                    >
-                        <Input placeholder="e.g., Italy, Thailand" />
+                    <Form.Item label="Made In" name="made_in">
+                        <Input />
                     </Form.Item>
 
-                    <Form.Item
-                        label="Type"
-                        name="type"
-                        rules={[{ required: true, message: 'Please select type!' }]}
-                    >
+                    <Form.Item label="Type" name="type" rules={[{ required: true }]}>
                         <Select>
                             <Select.Option value="Surface">Surface</Select.Option>
                             <Select.Option value="Furnishing">Furnishing</Select.Option>
                         </Select>
                     </Form.Item>
 
-                    <Form.Item
-                        label="Link"
-                        name="link"
-                    >
-                        <Input placeholder="https://example.com/..." />
+                    <Form.Item label="Link" name="link">
+                        <Input />
                     </Form.Item>
                 </Form>
             </Modal>
 
+            {/* Modal: Manage Focus Images */}
             <Modal
-                title="Product Focus Images"
+                title="Manage Focus Images"
                 open={isImageModalOpen}
                 onCancel={() => setIsImageModalOpen(false)}
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" style={{ marginBottom: 16 }}>
-                    <Form.Item
-                        name="image_url"
-                        rules={[{ required: true, message: 'Please input image URL!' }]}
-                        style={{ width: '60%' }}
-                    >
+                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
+                    <Form.Item name="image_url" rules={[{ required: true, message: 'Please input image URL!' }]} style={{ width: '60%' }}>
                         <Input placeholder="Image URL" />
                     </Form.Item>
-                    <Form.Item
-                        name="display_order"
-                        rules={[{ required: true, message: 'Order!' }]}
-                        style={{ width: '20%' }}
-                    >
+                    <Form.Item name="display_order" style={{ width: '20%' }}>
                         <Input type="number" placeholder="Order" />
                     </Form.Item>
                     <Form.Item>
-                        <Button type="primary" onClick={handleAddImage}>
-                            Add
-                        </Button>
+                        <Button type="primary" onClick={handleAddImage}>Add</Button>
                     </Form.Item>
                 </Form>
 

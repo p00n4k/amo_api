@@ -1,105 +1,104 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-// 🟢 GET — ดูข้อมูลแบรนด์ทั้งหมด
+// ==============================
+// 📌 GET: ดึงข้อมูลทั้งหมด
+// ==============================
 export async function GET() {
   try {
     const connection = await getConnection();
     const [rows] = await connection.query(`
-      SELECT 
+      SELECT
         brand_id,
         brand_name,
         brand_image,
         main_type,
         type,
-        brand_url,
-        created_at
+        brand_url
       FROM brands
       ORDER BY brand_id ASC
     `);
-    await connection.end();
-
     return NextResponse.json(rows);
   } catch (error: any) {
-    console.error("GET /brand error:", error);
+    console.error("Error fetching brands:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 🟡 POST — เพิ่ม Brand ใหม่
+// ==============================
+// 📌 POST: เพิ่มข้อมูลใหม่
+// ==============================
 export async function POST(req: Request) {
   try {
-    const { brand_name, brand_image, main_type, type, brand_url } = await req.json();
+    const body = await req.json();
+
+    const brand_image =
+      typeof body.brand_image === "object"
+        ? body.brand_image?.url || body.brand_image?.filePath || ""
+        : body.brand_image || "";
+
+    const { brand_name, main_type, type, brand_url } = body;
 
     if (!brand_name || !main_type || !type)
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
     const connection = await getConnection();
-    await connection.execute(
-      `
-      INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url)
-      VALUES (?, ?, ?, ?, ?)
-      `,
+    await connection.query(
+      `INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url)
+       VALUES (?, ?, ?, ?, ?)`,
       [brand_name, brand_image, main_type, type, brand_url || "https://amo.co.th"]
     );
-    await connection.end();
 
-    return NextResponse.json({ message: "Brand added successfully" });
+    return NextResponse.json({ message: "Brand created successfully!" });
   } catch (error: any) {
-    console.error("POST /brand error:", error);
+    console.error("Error creating brand:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 🟠 PUT — แก้ไข Brand
+// ==============================
+// 📌 PUT: แก้ไขข้อมูล
+// ==============================
 export async function PUT(req: Request) {
   try {
-    const { brand_id, brand_name, brand_image, main_type, type, brand_url } = await req.json();
+    const body = await req.json();
+
+    const brand_image =
+      typeof body.brand_image === "object"
+        ? body.brand_image?.url || body.brand_image?.filePath || ""
+        : body.brand_image || "";
+
+    const { brand_id, brand_name, main_type, type, brand_url } = body;
 
     if (!brand_id)
       return NextResponse.json({ error: "Missing brand_id" }, { status: 400 });
 
     const connection = await getConnection();
-    await connection.execute(
-      `
-      UPDATE brands
-      SET 
-        brand_name = COALESCE(?, brand_name),
-        brand_image = COALESCE(?, brand_image),
-        main_type = COALESCE(?, main_type),
-        type = COALESCE(?, type),
-        brand_url = COALESCE(?, brand_url)
-      WHERE brand_id = ?
-      `,
-      [brand_name, brand_image, main_type, type, brand_url, brand_id]
+    await connection.query(
+      `UPDATE brands
+       SET brand_name = ?, brand_image = ?, main_type = ?, type = ?, brand_url = ?
+       WHERE brand_id = ?`,
+      [brand_name, brand_image, main_type, type, brand_url || "https://amo.co.th", brand_id]
     );
-    await connection.end();
 
-    return NextResponse.json({ message: "Brand updated successfully" });
+    return NextResponse.json({ message: "Brand updated successfully!" });
   } catch (error: any) {
-    console.error("PUT /brand error:", error);
+    console.error("Error updating brand:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 🔴 DELETE — ลบ Brand
+// ==============================
+// 📌 DELETE: ลบข้อมูล
+// ==============================
 export async function DELETE(req: Request) {
   try {
     const { brand_id } = await req.json();
-
-    if (!brand_id)
-      return NextResponse.json({ error: "Missing brand_id" }, { status: 400 });
-
     const connection = await getConnection();
-    await connection.execute(`DELETE FROM brands WHERE brand_id = ?`, [brand_id]);
-    await connection.end();
-
-    return NextResponse.json({ message: "Brand deleted successfully" });
+    await connection.query(`DELETE FROM brands WHERE brand_id = ?`, [brand_id]);
+    return NextResponse.json({ message: "Brand deleted successfully!" });
   } catch (error: any) {
-    console.error("DELETE /brand error:", error);
+    console.error("Error deleting brand:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
