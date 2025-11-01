@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-// ==============================
-// 📌 GET: ดึงข้อมูลทั้งหมด
-// ==============================
 export async function GET() {
   try {
     const connection = await getConnection();
     const [rows] = await connection.query(`
-      SELECT
-        brand_id,
-        brand_name,
-        brand_image,
-        main_type,
-        type,
-        brand_url
+      SELECT brand_id, brand_name, brand_image, main_type, type, brand_url
       FROM brands
       ORDER BY brand_id ASC
     `);
@@ -25,13 +16,11 @@ export async function GET() {
   }
 }
 
-// ==============================
-// 📌 POST: เพิ่มข้อมูลใหม่
-// ==============================
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    // ✅ กรองข้อมูล image ให้เหลือแค่ path
     const brand_image =
       typeof body.brand_image === "object"
         ? body.brand_image?.url || body.brand_image?.filePath || ""
@@ -56,17 +45,29 @@ export async function POST(req: Request) {
   }
 }
 
-// ==============================
-// 📌 PUT: แก้ไขข้อมูล
-// ==============================
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
 
-    const brand_image =
-      typeof body.brand_image === "object"
-        ? body.brand_image?.url || body.brand_image?.filePath || ""
-        : body.brand_image || "";
+    // ✅ ตัด fileList/file ออกจาก object
+    const rawImage = body.brand_image;
+    let brand_image = "";
+
+    if (typeof rawImage === "object") {
+      // ถ้าเป็น array (เช่น fileList)
+      if (Array.isArray(rawImage)) {
+        brand_image = rawImage[0]?.url || rawImage[0]?.response?.url || "";
+      } else {
+        brand_image =
+          rawImage.url ||
+          rawImage.filePath ||
+          rawImage.response?.url ||
+          rawImage[0]?.url ||
+          "";
+      }
+    } else {
+      brand_image = rawImage || "";
+    }
 
     const { brand_id, brand_name, main_type, type, brand_url } = body;
 
@@ -88,9 +89,6 @@ export async function PUT(req: Request) {
   }
 }
 
-// ==============================
-// 📌 DELETE: ลบข้อมูล
-// ==============================
 export async function DELETE(req: Request) {
   try {
     const { brand_id } = await req.json();

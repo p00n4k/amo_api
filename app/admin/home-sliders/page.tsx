@@ -6,24 +6,24 @@ import {
     Button,
     Modal,
     Form,
-    Input,
     InputNumber,
     Space,
     message,
     Typography,
     Image,
     Popconfirm,
+    Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Slider {
@@ -38,6 +38,35 @@ export default function HomeSlidersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSlider, setEditingSlider] = useState<Slider | null>(null);
     const [form] = Form.useForm();
+    const [uploading, setUploading] = useState(false);
+
+    // ✅ อัปโหลดไฟล์ไปยัง API /api/admin/upload
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const filePath = res.data?.filePath;
+            if (filePath) {
+                form.setFieldValue('image_url', filePath);
+                message.success('Upload successful!');
+            } else {
+                message.error('Upload failed: No file path returned');
+            }
+            setUploading(false);
+            return filePath;
+        } catch (error) {
+            console.error('Upload failed:', error);
+            message.error('Upload failed!');
+            setUploading(false);
+            return '';
+        }
+    };
 
     const showModal = (slider?: Slider) => {
         if (slider) {
@@ -69,6 +98,7 @@ export default function HomeSlidersPage() {
             setIsModalOpen(false);
             form.resetFields();
         } catch (error) {
+            console.error(error);
             message.error('Operation failed!');
         }
     };
@@ -96,7 +126,13 @@ export default function HomeSlidersPage() {
             key: 'image_url',
             width: 200,
             render: (url: string) => (
-                <Image src={url} alt="Slider" width={150} height={80} style={{ objectFit: 'cover' }} />
+                <Image
+                    src={url}
+                    alt="Slider"
+                    width={150}
+                    height={80}
+                    style={{ objectFit: 'cover' }}
+                />
             ),
         },
         {
@@ -135,9 +171,19 @@ export default function HomeSlidersPage() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: 16,
+                }}
+            >
                 <Title level={2}>Home Sliders Management</Title>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => showModal()}
+                >
                     Add Slider
                 </Button>
             </div>
@@ -161,11 +207,33 @@ export default function HomeSlidersPage() {
             >
                 <Form form={form} layout="vertical">
                     <Form.Item
-                        label="Image URL"
+                        label="Image"
                         name="image_url"
-                        rules={[{ required: true, message: 'Please input image URL!' }]}
+                        rules={[{ required: true, message: 'Please upload an image!' }]}
                     >
-                        <Input placeholder="/uploads/home/sample.jpg" />
+                        <Upload
+                            name="file"
+                            showUploadList={false}
+                            customRequest={async ({ file, onSuccess }) => {
+                                const uploadedPath = await handleUpload(file as File);
+                                if (uploadedPath) {
+                                    form.setFieldValue('image_url', uploadedPath);
+                                }
+                                onSuccess && onSuccess('ok');
+                            }}
+                        >
+                            <Button icon={<UploadOutlined />} loading={uploading}>
+                                Upload Image
+                            </Button>
+                        </Upload>
+                        {form.getFieldValue('image_url') && (
+                            <Image
+                                src={form.getFieldValue('image_url')}
+                                alt="Preview"
+                                width={150}
+                                style={{ marginTop: 10, borderRadius: 4 }}
+                            />
+                        )}
                     </Form.Item>
 
                     <Form.Item

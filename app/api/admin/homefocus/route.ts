@@ -13,8 +13,7 @@ export async function GET() {
         pf.description,
         pf.made_in,
         pf.type,
-        pf.link,
-        pf.created_at
+        pf.link
       FROM product_focus pf
       LEFT JOIN brands b ON pf.brand_id = b.brand_id
       ORDER BY pf.focus_id DESC

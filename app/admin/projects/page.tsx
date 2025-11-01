@@ -16,19 +16,20 @@ import {
     Tag,
     List,
     Image,
+    Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     PictureOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Project {
@@ -36,7 +37,6 @@ interface Project {
     project_name: string;
     data_update: string;
     project_category: 'Residential' | 'Commercial';
-    created_at: string;
 }
 
 interface ProjectImage {
@@ -54,6 +54,10 @@ export default function ProjectsPage() {
     const [projectImages, setProjectImages] = useState<ProjectImage[]>([]);
     const [form] = Form.useForm();
     const [imageForm] = Form.useForm();
+    const [uploading, setUploading] = useState(false);
+
+    // ✅ ป้องกัน rawData.some is not a function
+    const projects = Array.isArray(data) ? data : [];
 
     const showModal = (project?: Project) => {
         if (project) {
@@ -114,6 +118,31 @@ export default function ProjectsPage() {
             mutate();
         } catch (error) {
             message.error('Delete failed!');
+        }
+    };
+
+    // ✅ Upload function
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            const filePath = res.data?.filePath;
+            if (filePath) {
+                imageForm.setFieldValue('image_url', filePath);
+                message.success('Upload successful!');
+            } else {
+                message.error('No file path returned');
+            }
+            setUploading(false);
+            return filePath;
+        } catch (error) {
+            message.error('Upload failed!');
+            setUploading(false);
+            return '';
         }
     };
 
@@ -213,7 +242,13 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
-            <Table columns={columns} dataSource={data} rowKey="project_id" pagination={{ pageSize: 10 }} />
+            {/* ✅ ใช้ projects ที่เป็น array แน่นอน */}
+            <Table
+                columns={columns}
+                dataSource={projects}
+                rowKey="project_id"
+                pagination={{ pageSize: 10 }}
+            />
 
             {/* Modal: Project Form */}
             <Modal
@@ -227,15 +262,27 @@ export default function ProjectsPage() {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="Project Name" name="project_name" rules={[{ required: true, message: 'Please input project name!' }]}>
+                    <Form.Item
+                        label="Project Name"
+                        name="project_name"
+                        rules={[{ required: true, message: 'Please input project name!' }]}
+                    >
                         <Input />
                     </Form.Item>
 
-                    <Form.Item label="Date Update" name="data_update" rules={[{ required: true, message: 'Please select date!' }]}>
+                    <Form.Item
+                        label="Date Update"
+                        name="data_update"
+                        rules={[{ required: true, message: 'Please select date!' }]}
+                    >
                         <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
 
-                    <Form.Item label="Category" name="project_category" rules={[{ required: true, message: 'Please select category!' }]}>
+                    <Form.Item
+                        label="Category"
+                        name="project_category"
+                        rules={[{ required: true, message: 'Please select category!' }]}
+                    >
                         <Select>
                             <Select.Option value="Residential">Residential</Select.Option>
                             <Select.Option value="Commercial">Commercial</Select.Option>
@@ -252,28 +299,60 @@ export default function ProjectsPage() {
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
+                <Form
+                    form={imageForm} // ✅ ผูก useForm
+                    layout="inline"
+                    onFinish={handleAddImage}
+                    style={{ marginBottom: 16 }}
+                >
                     <Form.Item
                         name="image_url"
-                        rules={[{ required: true, message: 'Please input image URL!' }]}
+                        rules={[{ required: true, message: 'Please upload an image!' }]}
                         style={{ width: '60%' }}
                     >
-                        <Input placeholder="Image URL" />
+                        <Upload
+                            name="file"
+                            showUploadList={false}
+                            customRequest={async ({ file, onSuccess }) => {
+                                const path = await handleUpload(file as File);
+                                if (path) imageForm.setFieldValue('image_url', path);
+                                onSuccess && onSuccess('ok');
+                            }}
+                        >
+                            <Button icon={<UploadOutlined />} loading={uploading}>
+                                Upload Image
+                            </Button>
+                        </Upload>
                     </Form.Item>
+
                     <Form.Item
                         name="display_order"
-                        rules={[{ required: true, message: 'Order!' }]}
+                        rules={[{ required: true, message: 'Order required!' }]}
                         style={{ width: '20%' }}
                     >
                         <Input type="number" placeholder="Order" />
                     </Form.Item>
+
                     <Form.Item>
-                        <Button type="primary" onClick={handleAddImage}>
+                        <Button type="primary" htmlType="submit">
                             Add
                         </Button>
                     </Form.Item>
                 </Form>
 
+                {/* ✅ Preview image */}
+                {imageForm.getFieldValue('image_url') && (
+                    <div style={{ marginBottom: 16 }}>
+                        <Image
+                            src={imageForm.getFieldValue('image_url')}
+                            alt="Preview"
+                            width={200}
+                            style={{ borderRadius: 4 }}
+                        />
+                    </div>
+                )}
+
+                {/* ✅ List images */}
                 <List
                     grid={{ gutter: 16, column: 3 }}
                     dataSource={projectImages}
@@ -281,7 +360,14 @@ export default function ProjectsPage() {
                         <List.Item>
                             <div style={{ position: 'relative' }}>
                                 <Image src={item.image_url} alt="Project" style={{ width: '100%' }} />
-                                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div
+                                    style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                    }}
+                                >
                                     <span>Order: {item.display_order}</span>
                                     <Popconfirm
                                         title="Delete this image?"

@@ -15,18 +15,19 @@ import {
   Image,
   Popconfirm,
   Tag,
+  Upload,
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
 const { TextArea } = Input;
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Collection {
@@ -53,6 +54,36 @@ export default function CollectionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [form] = Form.useForm();
+  const [uploading, setUploading] = useState(false);
+
+  // ✅ ป้องกัน error rawData.some
+  const collections = Array.isArray(data) ? data : [];
+
+  // ✅ Upload function
+  const handleUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post('/api/admin/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const filePath = res.data?.filePath;
+      if (filePath) {
+        form.setFieldValue('image', filePath);
+        message.success('Upload successful!');
+      } else {
+        message.error('No file path returned');
+      }
+      setUploading(false);
+      return filePath;
+    } catch (error) {
+      console.error('Upload failed:', error);
+      message.error('Upload failed!');
+      setUploading(false);
+      return '';
+    }
+  };
 
   const showModal = (collection?: Collection) => {
     if (collection) {
@@ -69,7 +100,6 @@ export default function CollectionsPage() {
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-
       if (editingCollection) {
         await axios.put('/api/admin/collection', {
           collection_id: editingCollection.collection_id,
@@ -80,11 +110,11 @@ export default function CollectionsPage() {
         await axios.post('/api/admin/collection', values);
         message.success('Collection created successfully!');
       }
-
       mutate();
       setIsModalOpen(false);
       form.resetFields();
     } catch (error) {
+      console.error(error);
       message.error('Operation failed!');
     }
   };
@@ -177,7 +207,12 @@ export default function CollectionsPage() {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={data} rowKey="collection_id" pagination={{ pageSize: 10 }} />
+      <Table
+        columns={columns}
+        dataSource={collections}
+        rowKey="collection_id"
+        pagination={{ pageSize: 10 }}
+      />
 
       <Modal
         title={editingCollection ? 'Edit Collection' : 'Add Collection'}
@@ -190,23 +225,15 @@ export default function CollectionsPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            label="Type"
-            name="type"
-            rules={[{ required: true, message: 'Please input type!' }]}
-          >
+          <Form.Item label="Type" name="type" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            label="Brand"
-            name="brand_id"
-            rules={[{ required: true, message: 'Please select brand!' }]}
-          >
+          <Form.Item label="Brand" name="brand_id" rules={[{ required: true }]}>
             <Select>
-              {brands?.map((brand) => (
-                <Select.Option key={brand.brand_id} value={brand.brand_id}>
-                  {brand.brand_name}
+              {brands?.map((b) => (
+                <Select.Option key={b.brand_id} value={b.brand_id}>
+                  {b.brand_name}
                 </Select.Option>
               ))}
             </Select>
@@ -215,7 +242,7 @@ export default function CollectionsPage() {
           <Form.Item
             label="Material Type"
             name="material_type"
-            rules={[{ required: true, message: 'Please select material type!' }]}
+            rules={[{ required: true }]}
           >
             <Select>
               <Select.Option value="Surface">Surface</Select.Option>
@@ -231,12 +258,34 @@ export default function CollectionsPage() {
             <TextArea rows={3} />
           </Form.Item>
 
+          {/* ✅ เปลี่ยนจากกรอก URL → Upload Image */}
           <Form.Item
-            label="Image URL"
+            label="Image"
             name="image"
-            rules={[{ required: true, message: 'Please input image URL!' }]}
+            rules={[{ required: true, message: 'Please upload an image!' }]}
           >
-            <Input placeholder="/uploads/products/sample.jpg" />
+            <Upload
+              name="file"
+              showUploadList={false}
+              customRequest={async ({ file, onSuccess }) => {
+                const path = await handleUpload(file as File);
+                if (path) form.setFieldValue('image', path);
+                onSuccess && onSuccess('ok');
+              }}
+            >
+              <Button icon={<UploadOutlined />} loading={uploading}>
+                Upload Image
+              </Button>
+            </Upload>
+
+            {form.getFieldValue('image') && (
+              <Image
+                src={form.getFieldValue('image')}
+                alt="Preview"
+                width={120}
+                style={{ marginTop: 10, borderRadius: 4 }}
+              />
+            )}
           </Form.Item>
 
           <Form.Item label="Link" name="link">

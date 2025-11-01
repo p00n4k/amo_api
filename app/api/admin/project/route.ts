@@ -1,126 +1,116 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-// 🟢 GET — ดูโปรเจกต์ทั้งหมด + paginate
+// ✅ GET – ดึงข้อมูลทั้งหมด หรือเฉพาะ project_id ที่ระบุ
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const offset = (page - 1) * limit;
-
+    const url = new URL(req.url);
+    const project_id = url.searchParams.get("project_id");
     const connection = await getConnection();
 
-    const [rows] = await connection.query(`
-      SELECT 
-        project_id,
-        project_name,
-        data_update,
-        project_category,
-        display_order
-      FROM projects
-      ORDER BY data_update DESC, project_id DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `);
+    if (project_id) {
+      // ✅ ดึงข้อมูลโครงการเดียว พร้อมรูปภาพ
+      const [rows]: any = await connection.query(
+        `
+        SELECT 
+          p.project_id,
+          p.project_name,
+          p.data_update,
+          p.project_category
+        FROM projects p
+        WHERE p.project_id = ?
+        `,
+        [project_id]
+      );
 
-    const [totalRows]: any = await connection.query(`
-      SELECT COUNT(*) AS total FROM projects
-    `);
+      const [images]: any = await connection.query(
+        `
+        SELECT image_id, image_url, display_order 
+        FROM project_images 
+        WHERE project_id = ? 
+        ORDER BY display_order ASC
+        `,
+        [project_id]
+      );
 
-    await connection.end();
+      if (rows.length === 0)
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    const total = totalRows[0].total;
-
-    return NextResponse.json({
-      projects: rows,
-      pagination: {
-        page,
-        limit,
-        total,
-        total_pages: Math.ceil(total / limit),
-      },
-    });
+      return NextResponse.json({
+        ...rows[0],
+        images: images || [],
+      });
+    } else {
+      // ✅ ดึงข้อมูลทั้งหมด
+      const [rows]: any = await connection.query(`
+        SELECT project_id, project_name, data_update, project_category
+        FROM projects
+        ORDER BY data_update DESC
+      `);
+      return NextResponse.json(rows);
+    }
   } catch (error: any) {
-    console.error("GET /admin/project error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("GET Error:", error);
+    return NextResponse.json({ error: "Database query failed" }, { status: 500 });
   }
 }
 
-// 🟡 POST — เพิ่มโปรเจกต์ใหม่
+// ✅ POST – เพิ่มโครงการใหม่
 export async function POST(req: Request) {
   try {
     const { project_name, data_update, project_category } = await req.json();
-
-    if (!project_name || !data_update || !project_category)
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `
       INSERT INTO projects (project_name, data_update, project_category)
       VALUES (?, ?, ?)
       `,
       [project_name, data_update, project_category]
     );
-    await connection.end();
-
-    return NextResponse.json({ message: "Project added successfully" });
+    return NextResponse.json({ message: "Project created successfully" });
   } catch (error: any) {
-    console.error("POST /admin/project error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("POST Error:", error);
+    return NextResponse.json({ error: "Insert failed" }, { status: 500 });
   }
 }
 
-// 🟠 PUT — แก้ไขชื่อ/หมวด/วันที่
+// ✅ PUT – แก้ไขข้อมูลโครงการ
 export async function PUT(req: Request) {
   try {
     const { project_id, project_name, data_update, project_category } =
       await req.json();
-
-    if (!project_id)
-      return NextResponse.json({ error: "Missing project_id" }, { status: 400 });
-
     const connection = await getConnection();
-    await connection.execute(
+    await connection.query(
       `
       UPDATE projects
-      SET 
-        project_name = COALESCE(?, project_name),
-        data_update = COALESCE(?, data_update),
-        project_category = COALESCE(?, project_category)
+      SET project_name = ?, data_update = ?, project_category = ?
       WHERE project_id = ?
       `,
       [project_name, data_update, project_category, project_id]
     );
-    await connection.end();
-
     return NextResponse.json({ message: "Project updated successfully" });
   } catch (error: any) {
-    console.error("PUT /admin/project error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("PUT Error:", error);
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
 
-// 🔴 DELETE — ลบโปรเจกต์
+// ✅ DELETE – ลบโครงการ (และรูปภาพใน project_images)
 export async function DELETE(req: Request) {
   try {
     const { project_id } = await req.json();
-
-    if (!project_id)
-      return NextResponse.json({ error: "Missing project_id" }, { status: 400 });
-
     const connection = await getConnection();
-    await connection.execute(`DELETE FROM projects WHERE project_id = ?`, [
+
+    await connection.query(`DELETE FROM project_images WHERE project_id = ?`, [
       project_id,
     ]);
-    await connection.end();
+    await connection.query(`DELETE FROM projects WHERE project_id = ?`, [
+      project_id,
+    ]);
 
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /admin/project error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("DELETE Error:", error);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

@@ -43,7 +43,7 @@ export default function BrandsPage() {
     const [form] = Form.useForm();
     const [uploading, setUploading] = useState(false);
 
-    // ✅ ใช้ upload แทน URL
+    // ✅ Upload image to /api/admin/upload
     const handleUpload = async (file: File) => {
         try {
             setUploading(true);
@@ -53,7 +53,7 @@ export default function BrandsPage() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setUploading(false);
-            return res.data.filePath; // คืน path ที่อัปโหลดเสร็จ
+            return res.data.filePath;
         } catch {
             message.error('Upload failed!');
             setUploading(false);
@@ -88,7 +88,8 @@ export default function BrandsPage() {
             mutate();
             setIsModalOpen(false);
             form.resetFields();
-        } catch {
+        } catch (err) {
+            console.error(err);
             message.error('Operation failed!');
         }
     };
@@ -114,9 +115,18 @@ export default function BrandsPage() {
             title: 'Image',
             dataIndex: 'brand_image',
             key: 'brand_image',
-            render: (url: string) => (
-                <Image src={url} alt="Brand" width={70} height={50} style={{ objectFit: 'cover' }} />
-            ),
+            render: (url: string) =>
+                url ? (
+                    <Image
+                        src={url}
+                        alt="Brand"
+                        width={70}
+                        height={50}
+                        style={{ objectFit: 'cover' }}
+                    />
+                ) : (
+                    <span>No Image</span>
+                ),
         },
         {
             title: 'Brand Name',
@@ -138,7 +148,9 @@ export default function BrandsPage() {
             dataIndex: 'brand_url',
             key: 'brand_url',
             render: (url: string) => (
-                <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                <a href={url} target="_blank" rel="noopener noreferrer">
+                    {url}
+                </a>
             ),
         },
         {
@@ -172,14 +184,25 @@ export default function BrandsPage() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: 16,
+                }}
+            >
                 <Title level={2}>Brands Management</Title>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
                     Add Brand
                 </Button>
             </div>
 
-            <Table columns={columns} dataSource={brands} rowKey="brand_id" pagination={{ pageSize: 10 }} />
+            <Table
+                columns={columns}
+                dataSource={brands}
+                rowKey="brand_id"
+                pagination={{ pageSize: 10 }}
+            />
 
             <Modal
                 title={editingBrand ? 'Edit Brand' : 'Add Brand'}
@@ -200,7 +223,11 @@ export default function BrandsPage() {
                         <Input />
                     </Form.Item>
 
-                    <Form.Item label="Brand Image" name="brand_image" rules={[{ required: true }]}>
+                    <Form.Item
+                        label="Brand Image"
+                        name="brand_image"
+                        rules={[{ required: true, message: 'Please upload image!' }]}
+                    >
                         <Upload
                             name="file"
                             listType="picture"
@@ -236,7 +263,11 @@ export default function BrandsPage() {
                         </Select>
                     </Form.Item>
 
-                    <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+                    <Form.Item
+                        label="Type"
+                        name="type"
+                        rules={[{ required: true, message: 'Please input type!' }]}
+                    >
                         <Input placeholder="e.g., Porcelain, Ceramic, Wood" />
                     </Form.Item>
 
