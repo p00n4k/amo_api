@@ -27,13 +27,16 @@ import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface ProductMain {
     id: number;
     collection_name: string;
     brand_name: string;
+    brand_image: string;
     link: string;
+    images?: ProductImage[];
 }
 
 interface Brand {
@@ -41,7 +44,7 @@ interface Brand {
     brand_name: string;
 }
 
-interface MainImage {
+interface ProductImage {
     image_id: number;
     image_url: string;
 }
@@ -51,58 +54,14 @@ export default function ProductMainPage() {
     const { data: brands } = useSWR<Brand[]>('/api/admin/brand', fetcher);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-    const [editingMain, setEditingMain] = useState<ProductMain | null>(null);
-    const [selectedMain, setSelectedMain] = useState<number | null>(null);
-    const [mainImages, setMainImages] = useState<MainImage[]>([]);
+    const [editingProduct, setEditingProduct] = useState<ProductMain | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
+    const [productImages, setProductImages] = useState<ProductImage[]>([]);
     const [form] = Form.useForm();
-    const [imageForm] = Form.useForm();
     const [uploading, setUploading] = useState(false);
+    const [uploadedImagePath, setUploadedImagePath] = useState<string>('');
 
-    const showModal = (main?: ProductMain) => {
-        if (main) {
-            setEditingMain(main);
-            form.setFieldsValue(main);
-        } else {
-            setEditingMain(null);
-            form.resetFields();
-        }
-        setIsModalOpen(true);
-    };
-
-    const showImageModal = async (id: number) => {
-        setSelectedMain(id);
-        try {
-            const response = await axios.get(`/api/admin/productmain?id=${id}`);
-            setMainImages(response.data.images || []);
-            setIsImageModalOpen(true);
-        } catch (error) {
-            message.error('Failed to load images!');
-        }
-    };
-
-    const handleOk = async () => {
-        try {
-            const values = await form.validateFields();
-
-            if (editingMain) {
-                await axios.put('/api/admin/productmain', {
-                    id: editingMain.id,
-                    ...values,
-                });
-                message.success('Product Main updated successfully!');
-            } else {
-                await axios.post('/api/admin/productmain', values);
-                message.success('Product Main created successfully!');
-            }
-
-            mutate();
-            setIsModalOpen(false);
-            form.resetFields();
-        } catch (error) {
-            message.error('Operation failed!');
-        }
-    };
-
+    // ✅ Upload Image Handler
     const handleUpload = async (file: File) => {
         try {
             setUploading(true);
@@ -115,47 +74,114 @@ export default function ProductMainPage() {
 
             const filePath = res.data?.filePath;
             if (filePath) {
-                imageForm.setFieldValue('image_url', filePath);
+                setUploadedImagePath(filePath);
                 message.success('Upload successful!');
+                return true;
             } else {
                 message.error('No file path returned!');
+                return false;
             }
-            setUploading(false);
-        } catch (error) {
+        } catch (err) {
+            console.error('Upload failed:', err);
             message.error('Upload failed!');
+            return false;
+        } finally {
             setUploading(false);
+        }
+    };
+
+    const showModal = (product?: ProductMain) => {
+        if (product) {
+            setEditingProduct(product);
+            form.setFieldsValue(product);
+        } else {
+            setEditingProduct(null);
+            form.resetFields();
+        }
+        setIsModalOpen(true);
+    };
+
+    const showImageModal = async (product_id: number) => {
+        setSelectedProduct(product_id);
+        setUploadedImagePath(''); // Reset
+        try {
+            const response = await axios.get(`/api/admin/productmain?id=${product_id}`);
+            setProductImages(response.data.images || []);
+            setIsImageModalOpen(true);
+        } catch (error) {
+            message.error('Failed to load images!');
+        }
+    };
+
+    const handleOk = async () => {
+        try {
+            const values = await form.validateFields();
+
+            if (editingProduct) {
+                await axios.put('/api/admin/productmain', {
+                    id: editingProduct.id,
+                    ...values,
+                });
+                message.success('Product updated successfully!');
+            } else {
+                await axios.post('/api/admin/productmain', values);
+                message.success('Product created successfully!');
+            }
+
+            mutate();
+            setIsModalOpen(false);
+            form.resetFields();
+        } catch (error) {
+            console.error('Error:', error);
+            message.error('Operation failed!');
         }
     };
 
     const handleAddImage = async () => {
         try {
-            const values = await imageForm.validateFields();
-            await axios.post('/api/admin/productmain', {
-                product_main_id: selectedMain,
-                ...values,
-                action: 'add_image',
-            });
-            message.success('Image added successfully!');
-            imageForm.resetFields();
-
-            if (selectedMain) {
-                const response = await axios.get(`/api/admin/productmain?id=${selectedMain}`);
-                setMainImages(response.data.images || []);
+            // ✅ ตรวจสอบว่ามีรูปที่อัปโหลดแล้ว
+            if (!uploadedImagePath) {
+                message.error('Please upload an image first!');
+                return;
             }
-        } catch (error) {
-            message.error('Operation failed!');
+
+            console.log('🟢 Adding image:', {
+                product_main_id: selectedProduct,
+                image_url: uploadedImagePath,
+            });
+
+            // ✅ ส่งเฉพาะ string path ไปยัง API
+            await axios.post('/api/admin/productmain', {
+                action: 'add_image',
+                product_main_id: selectedProduct,
+                image_url: uploadedImagePath, // ✅ ส่งเป็น string
+            });
+
+            message.success('Image added successfully!');
+            setUploadedImagePath(''); // Reset
+
+            // ✅ Reload images
+            if (selectedProduct) {
+                const response = await axios.get(`/api/admin/productmain?id=${selectedProduct}`);
+                setProductImages(response.data.images || []);
+            }
+        } catch (error: any) {
+            console.error('Add image error:', error);
+            message.error(error.response?.data?.error || 'Operation failed!');
         }
     };
 
     const handleDeleteImage = async (image_id: number) => {
         try {
             await axios.delete('/api/admin/productmain', {
-                data: { image_id, action: 'delete_image' },
+                data: { action: 'delete_image', image_id },
             });
             message.success('Image deleted successfully!');
-            if (selectedMain) {
-                const response = await axios.get(`/api/admin/productmain?id=${selectedMain}`);
-                setMainImages(response.data.images || []);
+
+            // Reload images
+            if (selectedProduct) {
+                const response = await axios.get(`/api/admin/productmain?id=${selectedProduct}`);
+                setProductImages(response.data.images || []);
             }
         } catch (error) {
             message.error('Delete failed!');
@@ -165,7 +191,7 @@ export default function ProductMainPage() {
     const handleDelete = async (id: number) => {
         try {
             await axios.delete('/api/admin/productmain', { data: { id } });
-            message.success('Product Main deleted successfully!');
+            message.success('Deleted successfully!');
             mutate();
         } catch (error) {
             message.error('Delete failed!');
@@ -180,7 +206,7 @@ export default function ProductMainPage() {
             width: 70,
         },
         {
-            title: 'Collection Name',
+            title: 'Collection',
             dataIndex: 'collection_name',
             key: 'collection_name',
         },
@@ -193,11 +219,14 @@ export default function ProductMainPage() {
             title: 'Link',
             dataIndex: 'link',
             key: 'link',
-            render: (url: string) => (
-                <a href={url} target="_blank" rel="noopener noreferrer">
-                    {url}
-                </a>
-            ),
+            render: (link: string) =>
+                link ? (
+                    <a href={link} target="_blank" rel="noopener noreferrer">
+                        View
+                    </a>
+                ) : (
+                    '-'
+                ),
         },
         {
             title: 'Actions',
@@ -206,23 +235,21 @@ export default function ProductMainPage() {
             render: (_: any, record: ProductMain) => (
                 <Space>
                     <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => showModal(record)}
+                    />
+                    <Button
                         icon={<PictureOutlined />}
                         size="small"
                         onClick={() => showImageModal(record.id)}
                     >
                         Images
                     </Button>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => showModal(record)}
-                    />
                     <Popconfirm
-                        title="Delete this product main?"
+                        title="Delete this product?"
                         onConfirm={() => handleDelete(record.id)}
-                        okText="Yes"
-                        cancelText="No"
                     >
                         <Button danger icon={<DeleteOutlined />} size="small" />
                     </Popconfirm>
@@ -243,17 +270,11 @@ export default function ProductMainPage() {
                 </Button>
             </div>
 
-            <Table
-                columns={columns}
-                dataSource={data}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: 1000 }}
-            />
+            <Table columns={columns} dataSource={data} rowKey="id" pagination={{ pageSize: 10 }} />
 
-            {/* ✅ Modal: Add/Edit Product Main */}
+            {/* Modal: Add/Edit Product */}
             <Modal
-                title={editingMain ? 'Edit Product Main' : 'Add Product Main'}
+                title={editingProduct ? 'Edit Product Main' : 'Add Product Main'}
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={() => {
@@ -266,12 +287,16 @@ export default function ProductMainPage() {
                     <Form.Item
                         label="Collection Name"
                         name="collection_name"
-                        rules={[{ required: true }]}
+                        rules={[{ required: true, message: 'Please input collection name!' }]}
                     >
                         <Input />
                     </Form.Item>
 
-                    <Form.Item label="Brand" name="brand_name" rules={[{ required: true }]}>
+                    <Form.Item
+                        label="Brand"
+                        name="brand_name"
+                        rules={[{ required: true, message: 'Please select brand!' }]}
+                    >
                         <Select placeholder="Select Brand">
                             {brands?.map((b) => (
                                 <Select.Option key={b.brand_id} value={b.brand_name}>
@@ -282,92 +307,100 @@ export default function ProductMainPage() {
                     </Form.Item>
 
                     <Form.Item label="Link" name="link">
-                        <Input placeholder="https://example.com" />
+                        <Input placeholder="https://example.com/product" />
                     </Form.Item>
                 </Form>
             </Modal>
 
-            {/* ✅ Modal: Manage Images with Upload */}
+            {/* Modal: Manage Images */}
             <Modal
-                title="Manage Main Images"
+                title="Manage Product Images"
                 open={isImageModalOpen}
-                onCancel={() => setIsImageModalOpen(false)}
+                onCancel={() => {
+                    setIsImageModalOpen(false);
+                    setUploadedImagePath('');
+                }}
                 footer={null}
                 width={800}
             >
-                <Form
-                    form={imageForm}
-                    layout="inline"
-                    onFinish={handleAddImage}
-                    style={{ marginBottom: 16 }}
-                >
-                    <Form.Item
-                        name="image_url"
-                        rules={[{ required: true, message: 'Please upload an image!' }]}
-                        style={{ width: '60%' }}
-                    >
-                        <Upload
-                            name="file"
-                            showUploadList={false}
-                            customRequest={async ({ file, onSuccess }) => {
-                                await handleUpload(file as File);
+                {/* ✅ Upload Section */}
+                <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                    <Title level={5}>Upload New Image</Title>
+
+                    <Upload
+                        name="file"
+                        showUploadList={false}
+                        accept="image/*"
+                        customRequest={async ({ file, onSuccess, onError }) => {
+                            const success = await handleUpload(file as File);
+                            if (success) {
                                 onSuccess && onSuccess('ok');
-                            }}
-                        >
-                            <Button
-                                icon={<UploadOutlined />}
-                                loading={uploading}
-                            >
-                                Upload Image
-                            </Button>
-                        </Upload>
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit">
-                            Add
+                            } else {
+                                onError && onError(new Error('Upload failed'));
+                            }
+                        }}
+                    >
+                        <Button icon={<UploadOutlined />} loading={uploading}>
+                            {uploadedImagePath ? 'Change Image' : 'Upload Image'}
                         </Button>
-                    </Form.Item>
-                </Form>
+                    </Upload>
 
-                {/* ✅ Preview */}
-                {imageForm.getFieldValue('image_url') && (
-                    <div style={{ marginBottom: 16 }}>
-                        <Image
-                            src={imageForm.getFieldValue('image_url')}
-                            alt="Preview"
-                            width={200}
-                            style={{ borderRadius: 4 }}
-                        />
-                    </div>
-                )}
-
-                <List
-                    grid={{ gutter: 16, column: 3 }}
-                    dataSource={mainImages}
-                    renderItem={(item) => (
-                        <List.Item>
-                            <div style={{ position: 'relative' }}>
-                                <Image src={item.image_url} alt="Main" style={{ width: '100%' }} />
-                                <div
-                                    style={{
-                                        marginTop: 8,
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Popconfirm
-                                        title="Delete this image?"
-                                        onConfirm={() => handleDeleteImage(item.image_id)}
-                                    >
-                                        <Button danger size="small" icon={<DeleteOutlined />} />
-                                    </Popconfirm>
-                                </div>
-                            </div>
-                        </List.Item>
+                    {/* ✅ Preview */}
+                    {uploadedImagePath && (
+                        <div style={{ marginTop: 16 }}>
+                            <Image
+                                src={uploadedImagePath}
+                                alt="Preview"
+                                width={200}
+                                style={{ borderRadius: 6 }}
+                            />
+                        </div>
                     )}
-                />
+
+                    <Button
+                        type="primary"
+                        onClick={handleAddImage}
+                        disabled={!uploadedImagePath}
+                        style={{ marginTop: 16 }}
+                        block
+                    >
+                        Add Image to Product
+                    </Button>
+                </div>
+
+                {/* ✅ Current Images */}
+                <div>
+                    <Title level={5}>Current Images</Title>
+                    <List
+                        grid={{ gutter: 16, column: 3 }}
+                        dataSource={productImages}
+                        renderItem={(item) => (
+                            <List.Item>
+                                <div style={{ position: 'relative' }}>
+                                    <Image
+                                        src={item.image_url}
+                                        alt="Product"
+                                        style={{
+                                            width: '100%',
+                                            height: 150,
+                                            objectFit: 'cover',
+                                            borderRadius: 4,
+                                        }}
+                                    />
+                                    <div style={{ marginTop: 8, textAlign: 'right' }}>
+                                        <Popconfirm
+                                            title="Delete this image?"
+                                            onConfirm={() => handleDeleteImage(item.image_id)}
+                                        >
+                                            <Button danger size="small" icon={<DeleteOutlined />} />
+                                        </Popconfirm>
+                                    </div>
+                                </div>
+                            </List.Item>
+                        )}
+                        locale={{ emptyText: 'No images yet. Upload one above!' }}
+                    />
+                </div>
             </Modal>
         </div>
     );

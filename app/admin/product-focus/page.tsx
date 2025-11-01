@@ -15,12 +15,14 @@ import {
     Tag,
     List,
     Image,
+    Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     PictureOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
@@ -61,6 +63,38 @@ export default function ProductFocusPage() {
     const [focusImages, setFocusImages] = useState<FocusImage[]>([]);
     const [form] = Form.useForm();
     const [imageForm] = Form.useForm();
+    const [uploading, setUploading] = useState(false);
+    const [uploadedImagePath, setUploadedImagePath] = useState<string>('');
+
+    // ✅ Upload Image Handler
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const filePath = res.data?.filePath;
+            if (filePath) {
+                setUploadedImagePath(filePath);
+                imageForm.setFieldsValue({ image_url: filePath });
+                message.success('Upload successful!');
+                return true;
+            } else {
+                message.error('No file path returned!');
+                return false;
+            }
+        } catch (err) {
+            console.error('Upload failed:', err);
+            message.error('Upload failed!');
+            return false;
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const showModal = (focus?: ProductFocus) => {
         if (focus) {
@@ -75,6 +109,8 @@ export default function ProductFocusPage() {
 
     const showImageModal = async (focus_id: number) => {
         setSelectedFocus(focus_id);
+        setUploadedImagePath(''); // Reset uploaded image
+        imageForm.resetFields();
         try {
             const response = await axios.get(`/api/admin/homefocus?focus_id=${focus_id}`);
             setFocusImages(response.data.images || []);
@@ -109,19 +145,34 @@ export default function ProductFocusPage() {
 
     const handleAddImage = async () => {
         try {
+            // ✅ Validate that image is uploaded
+            if (!uploadedImagePath) {
+                message.error('Please upload an image first!');
+                return;
+            }
+
             const values = await imageForm.validateFields();
+
             await axios.post('/api/admin/homefocus', {
                 focus_id: selectedFocus,
-                ...values,
+                image_url: uploadedImagePath, // ✅ Use uploaded path
+                display_order: values.display_order || 0,
                 action: 'add_image',
             });
+
             message.success('Image added successfully!');
+
+            // ✅ Reset form and image
             imageForm.resetFields();
+            setUploadedImagePath('');
+
+            // ✅ Reload images
             if (selectedFocus) {
                 const response = await axios.get(`/api/admin/homefocus?focus_id=${selectedFocus}`);
                 setFocusImages(response.data.images || []);
             }
         } catch (error) {
+            console.error('Add image error:', error);
             message.error('Operation failed!');
         }
     };
@@ -271,42 +322,110 @@ export default function ProductFocusPage() {
             <Modal
                 title="Manage Focus Images"
                 open={isImageModalOpen}
-                onCancel={() => setIsImageModalOpen(false)}
+                onCancel={() => {
+                    setIsImageModalOpen(false);
+                    setUploadedImagePath('');
+                    imageForm.resetFields();
+                }}
                 footer={null}
                 width={800}
             >
-                <Form form={imageForm} layout="inline" onFinish={handleAddImage} style={{ marginBottom: 16 }}>
-                    <Form.Item name="image_url" rules={[{ required: true, message: 'Please input image URL!' }]} style={{ width: '60%' }}>
-                        <Input placeholder="Image URL" />
-                    </Form.Item>
-                    <Form.Item name="display_order" style={{ width: '20%' }}>
-                        <Input type="number" placeholder="Order" />
-                    </Form.Item>
-                    <Form.Item>
-                        <Button type="primary" onClick={handleAddImage}>Add</Button>
-                    </Form.Item>
-                </Form>
+                {/* ✅ Upload Form */}
+                <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                    <Form form={imageForm} layout="vertical">
+                        <Form.Item label="Upload Image" required>
+                            <Upload
+                                name="file"
+                                showUploadList={false}
+                                accept="image/*"
+                                customRequest={async ({ file, onSuccess, onError }) => {
+                                    const success = await handleUpload(file as File);
+                                    if (success) {
+                                        onSuccess && onSuccess('ok');
+                                    } else {
+                                        onError && onError(new Error('Upload failed'));
+                                    }
+                                }}
+                            >
+                                <Button icon={<UploadOutlined />} loading={uploading}>
+                                    {uploadedImagePath ? 'Change Image' : 'Upload Image'}
+                                </Button>
+                            </Upload>
 
-                <List
-                    grid={{ gutter: 16, column: 3 }}
-                    dataSource={focusImages}
-                    renderItem={(item) => (
-                        <List.Item>
-                            <div style={{ position: 'relative' }}>
-                                <Image src={item.image_url} alt="Focus" style={{ width: '100%' }} />
-                                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>Order: {item.display_order}</span>
-                                    <Popconfirm
-                                        title="Delete this image?"
-                                        onConfirm={() => handleDeleteImage(item.image_id)}
-                                    >
-                                        <Button danger size="small" icon={<DeleteOutlined />} />
-                                    </Popconfirm>
+                            {/* ✅ Image Preview */}
+                            {uploadedImagePath && (
+                                <div style={{ marginTop: 16 }}>
+                                    <Image
+                                        src={uploadedImagePath}
+                                        alt="Preview"
+                                        width={200}
+                                        style={{ borderRadius: 6 }}
+                                    />
                                 </div>
-                            </div>
-                        </List.Item>
-                    )}
-                />
+                            )}
+                        </Form.Item>
+
+                        {/* ✅ Hidden field to store image URL */}
+                        <Form.Item name="image_url" hidden>
+                            <Input />
+                        </Form.Item>
+
+                        <Form.Item label="Display Order" name="display_order">
+                            <Input type="number" placeholder="Order (0, 1, 2, ...)" />
+                        </Form.Item>
+
+                        <Form.Item>
+                            <Button
+                                type="primary"
+                                onClick={handleAddImage}
+                                disabled={!uploadedImagePath}
+                                block
+                            >
+                                Add Image to Collection
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </div>
+
+                {/* ✅ Images List */}
+                <div>
+                    <Title level={5}>Current Images</Title>
+                    <List
+                        grid={{ gutter: 16, column: 3 }}
+                        dataSource={focusImages}
+                        renderItem={(item) => (
+                            <List.Item>
+                                <div style={{ position: 'relative' }}>
+                                    <Image
+                                        src={item.image_url}
+                                        alt="Focus"
+                                        style={{
+                                            width: '100%',
+                                            height: 150,
+                                            objectFit: 'cover',
+                                            borderRadius: 4
+                                        }}
+                                    />
+                                    <div style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <span>Order: {item.display_order}</span>
+                                        <Popconfirm
+                                            title="Delete this image?"
+                                            onConfirm={() => handleDeleteImage(item.image_id)}
+                                        >
+                                            <Button danger size="small" icon={<DeleteOutlined />} />
+                                        </Popconfirm>
+                                    </div>
+                                </div>
+                            </List.Item>
+                        )}
+                        locale={{ emptyText: 'No images yet. Upload one above!' }}
+                    />
+                </div>
             </Modal>
         </div>
     );
