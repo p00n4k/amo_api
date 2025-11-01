@@ -33,6 +33,8 @@ export async function GET(req: Request) {
         [project_id]
       );
 
+      await connection.end();
+
       if (rows.length === 0)
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -47,6 +49,7 @@ export async function GET(req: Request) {
         FROM projects
         ORDER BY data_update DESC
       `);
+      await connection.end();
       return NextResponse.json(rows);
     }
   } catch (error: any) {
@@ -59,14 +62,20 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { project_name, data_update, project_category } = await req.json();
+
+    // 🟢 แปลงวันที่เป็น YYYY-MM-DD
+    const formattedDate = new Date(data_update).toISOString().split("T")[0];
+
     const connection = await getConnection();
     await connection.query(
       `
       INSERT INTO projects (project_name, data_update, project_category)
       VALUES (?, ?, ?)
       `,
-      [project_name, data_update, project_category]
+      [project_name, formattedDate, project_category]
     );
+    await connection.end();
+
     return NextResponse.json({ message: "Project created successfully" });
   } catch (error: any) {
     console.error("POST Error:", error);
@@ -79,6 +88,10 @@ export async function PUT(req: Request) {
   try {
     const { project_id, project_name, data_update, project_category } =
       await req.json();
+
+    // 🟢 แปลงวันที่เป็น YYYY-MM-DD (แก้ปัญหา Incorrect date value)
+    const formattedDate = new Date(data_update).toISOString().split("T")[0];
+
     const connection = await getConnection();
     await connection.query(
       `
@@ -86,12 +99,14 @@ export async function PUT(req: Request) {
       SET project_name = ?, data_update = ?, project_category = ?
       WHERE project_id = ?
       `,
-      [project_name, data_update, project_category, project_id]
+      [project_name, formattedDate, project_category, project_id]
     );
+    await connection.end();
+
     return NextResponse.json({ message: "Project updated successfully" });
   } catch (error: any) {
     console.error("PUT Error:", error);
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -107,6 +122,8 @@ export async function DELETE(req: Request) {
     await connection.query(`DELETE FROM projects WHERE project_id = ?`, [
       project_id,
     ]);
+
+    await connection.end();
 
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error: any) {

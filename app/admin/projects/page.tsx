@@ -8,28 +8,25 @@ import {
     Form,
     Input,
     Select,
-    DatePicker,
     Space,
     message,
     Typography,
-    Popconfirm,
-    Tag,
-    List,
     Image,
+    Popconfirm,
     Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
-    PictureOutlined,
     UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
-import dayjs from 'dayjs';
 
 const { Title } = Typography;
+const { Option } = Select;
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Project {
@@ -37,35 +34,59 @@ interface Project {
     project_name: string;
     data_update: string;
     project_category: 'Residential' | 'Commercial';
+    project_images?: { image_id: number; image_url: string }[];
+    collections?: { collection_id: number; type: string }[];
 }
 
-interface ProjectImage {
-    image_id: number;
-    image_url: string;
-    display_order: number;
+interface Collection {
+    collection_id: number;
+    type: string;
+    material_type: string;
+    status: boolean;
+    image: string;
 }
 
 export default function ProjectsPage() {
     const { data, error, mutate } = useSWR<Project[]>('/api/admin/project', fetcher);
+    const { data: collections } = useSWR<Collection[]>('/api/admin/collection', fetcher);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [isCollectionModalOpen, setCollectionModalOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
-    const [selectedProject, setSelectedProject] = useState<number | null>(null);
-    const [projectImages, setProjectImages] = useState<ProjectImage[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+    const [selectedCollections, setSelectedCollections] = useState<number[]>([]);
     const [form] = Form.useForm();
-    const [imageForm] = Form.useForm();
+
+    // ✅ Upload Project Image
     const [uploading, setUploading] = useState(false);
+    const [uploadedImagePath, setUploadedImagePath] = useState<string>('');
 
-    // ✅ ป้องกัน rawData.some is not a function
-    const projects = Array.isArray(data) ? data : [];
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            const path = res.data.filePath;
+            setUploadedImagePath(path);
+            message.success('Upload successful!');
+            return path;
+        } catch (err) {
+            console.error('Upload error:', err);
+            message.error('Upload failed!');
+            return '';
+        } finally {
+            setUploading(false);
+        }
+    };
 
+    // ✅ Add/Edit Project
     const showModal = (project?: Project) => {
         if (project) {
             setEditingProject(project);
-            form.setFieldsValue({
-                ...project,
-                data_update: dayjs(project.data_update),
-            });
+            form.setFieldsValue(project);
         } else {
             setEditingProject(null);
             form.resetFields();
@@ -73,44 +94,29 @@ export default function ProjectsPage() {
         setIsModalOpen(true);
     };
 
-    const showImageModal = async (project_id: number) => {
-        setSelectedProject(project_id);
-        try {
-            const response = await axios.get(`/api/admin/project?project_id=${project_id}`);
-            setProjectImages(response.data.images || []);
-            setIsImageModalOpen(true);
-        } catch (error) {
-            message.error('Failed to load images!');
-        }
-    };
-
     const handleOk = async () => {
         try {
             const values = await form.validateFields();
-            const formattedValues = {
-                ...values,
-                data_update: values.data_update.format('YYYY-MM-DD'),
-            };
-
             if (editingProject) {
                 await axios.put('/api/admin/project', {
                     project_id: editingProject.project_id,
-                    ...formattedValues,
+                    ...values,
                 });
                 message.success('Project updated successfully!');
             } else {
-                await axios.post('/api/admin/project', formattedValues);
+                await axios.post('/api/admin/project', values);
                 message.success('Project created successfully!');
             }
-
             mutate();
             setIsModalOpen(false);
             form.resetFields();
         } catch (error) {
+            console.error(error);
             message.error('Operation failed!');
         }
     };
 
+    // ✅ Delete Project
     const handleDelete = async (project_id: number) => {
         try {
             await axios.delete('/api/admin/project', { data: { project_id } });
@@ -121,55 +127,31 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Upload function
-    const handleUpload = async (file: File) => {
+    // ✅ Open Modal for Managing Collections
+    const openCollectionsModal = async (project_id: number) => {
         try {
-            setUploading(true);
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await axios.post('/api/admin/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            const filePath = res.data?.filePath;
-            if (filePath) {
-                imageForm.setFieldValue('image_url', filePath);
-                message.success('Upload successful!');
-            } else {
-                message.error('No file path returned');
-            }
-            setUploading(false);
-            return filePath;
+            setSelectedProjectId(project_id);
+            const res = await axios.get(`/api/admin/projectcollection?project_id=${project_id}`);
+            setSelectedCollections(res.data.map((c: any) => c.collection_id));
+            setCollectionModalOpen(true);
         } catch (error) {
-            message.error('Upload failed!');
-            setUploading(false);
-            return '';
+            console.error(error);
+            message.error('Failed to load project collections!');
         }
     };
 
-    const handleAddImage = async () => {
+    // ✅ Save selected Collections
+    const handleSaveCollections = async () => {
         try {
-            const values = await imageForm.validateFields();
-            await axios.post('/api/admin/projectimage', {
-                project_id: selectedProject,
-                ...values,
+            await axios.post('/api/admin/projectcollection', {
+                project_id: selectedProjectId,
+                collection_ids: selectedCollections,
             });
-            message.success('Image added successfully!');
-            const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
-            setProjectImages(response.data.images || []);
-            imageForm.resetFields();
+            message.success('Collections updated!');
+            setCollectionModalOpen(false);
         } catch (error) {
-            message.error('Add image failed!');
-        }
-    };
-
-    const handleDeleteImage = async (image_id: number) => {
-        try {
-            await axios.delete('/api/admin/projectimage', { data: { image_id } });
-            message.success('Image deleted successfully!');
-            const response = await axios.get(`/api/admin/project?project_id=${selectedProject}`);
-            setProjectImages(response.data.images || []);
-        } catch (error) {
-            message.error('Delete image failed!');
+            console.error(error);
+            message.error('Failed to update collections!');
         }
     };
 
@@ -186,22 +168,19 @@ export default function ProjectsPage() {
             key: 'project_name',
         },
         {
-            title: 'Date Update',
+            title: 'Category',
+            dataIndex: 'project_category',
+            key: 'project_category',
+        },
+        {
+            title: 'Last Update',
             dataIndex: 'data_update',
             key: 'data_update',
         },
         {
-            title: 'Category',
-            dataIndex: 'project_category',
-            key: 'project_category',
-            render: (cat: string) => (
-                <Tag color={cat === 'Residential' ? 'blue' : 'green'}>{cat}</Tag>
-            ),
-        },
-        {
             title: 'Actions',
             key: 'actions',
-            width: 200,
+            width: 250,
             render: (_: any, record: Project) => (
                 <Space>
                     <Button
@@ -211,11 +190,10 @@ export default function ProjectsPage() {
                         onClick={() => showModal(record)}
                     />
                     <Button
-                        icon={<PictureOutlined />}
                         size="small"
-                        onClick={() => showImageModal(record.project_id)}
+                        onClick={() => openCollectionsModal(record.project_id)}
                     >
-                        Images
+                        Collections
                     </Button>
                     <Popconfirm
                         title="Delete this project?"
@@ -242,15 +220,14 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
-            {/* ✅ ใช้ projects ที่เป็น array แน่นอน */}
             <Table
                 columns={columns}
-                dataSource={projects}
+                dataSource={data}
                 rowKey="project_id"
                 pagination={{ pageSize: 10 }}
             />
 
-            {/* Modal: Project Form */}
+            {/* ✅ Add/Edit Project Modal */}
             <Modal
                 title={editingProject ? 'Edit Project' : 'Add Project'}
                 open={isModalOpen}
@@ -271,115 +248,51 @@ export default function ProjectsPage() {
                     </Form.Item>
 
                     <Form.Item
-                        label="Date Update"
-                        name="data_update"
-                        rules={[{ required: true, message: 'Please select date!' }]}
+                        label="Category"
+                        name="project_category"
+                        rules={[{ required: true, message: 'Please select project category!' }]}
                     >
-                        <DatePicker style={{ width: '100%' }} />
+                        <Select>
+                            <Option value="Residential">Residential</Option>
+                            <Option value="Commercial">Commercial</Option>
+                        </Select>
                     </Form.Item>
 
                     <Form.Item
-                        label="Category"
-                        name="project_category"
-                        rules={[{ required: true, message: 'Please select category!' }]}
+                        label="Data Update"
+                        name="data_update"
+                        rules={[{ required: true, message: 'Please input date!' }]}
                     >
-                        <Select>
-                            <Select.Option value="Residential">Residential</Select.Option>
-                            <Select.Option value="Commercial">Commercial</Select.Option>
-                        </Select>
+                        <Input type="date" />
                     </Form.Item>
+
                 </Form>
             </Modal>
 
-            {/* Modal: Manage Project Images */}
+            {/* ✅ Manage Collections Modal */}
             <Modal
-                title="Manage Project Images"
-                open={isImageModalOpen}
-                onCancel={() => setIsImageModalOpen(false)}
-                footer={null}
-                width={800}
+                title="Manage Project Collections"
+                open={isCollectionModalOpen}
+                onOk={handleSaveCollections}
+                onCancel={() => setCollectionModalOpen(false)}
+                width={600}
             >
-                <Form
-                    form={imageForm} // ✅ ผูก useForm
-                    layout="inline"
-                    onFinish={handleAddImage}
-                    style={{ marginBottom: 16 }}
+                <p style={{ marginBottom: 8 }}>
+                    Select collections to link with this project.
+                </p>
+                <Select
+                    mode="multiple"
+                    style={{ width: '100%' }}
+                    placeholder="Select collections"
+                    value={selectedCollections}
+                    onChange={(values) => setSelectedCollections(values)}
                 >
-                    <Form.Item
-                        name="image_url"
-                        rules={[{ required: true, message: 'Please upload an image!' }]}
-                        style={{ width: '60%' }}
-                    >
-                        <Upload
-                            name="file"
-                            showUploadList={false}
-                            customRequest={async ({ file, onSuccess }) => {
-                                const path = await handleUpload(file as File);
-                                if (path) imageForm.setFieldValue('image_url', path);
-                                onSuccess && onSuccess('ok');
-                            }}
-                        >
-                            <Button icon={<UploadOutlined />} loading={uploading}>
-                                Upload Image
-                            </Button>
-                        </Upload>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="display_order"
-                        rules={[{ required: true, message: 'Order required!' }]}
-                        style={{ width: '20%' }}
-                    >
-                        <Input type="number" placeholder="Order" />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit">
-                            Add
-                        </Button>
-                    </Form.Item>
-                </Form>
-
-                {/* ✅ Preview image */}
-                {imageForm.getFieldValue('image_url') && (
-                    <div style={{ marginBottom: 16 }}>
-                        <Image
-                            src={imageForm.getFieldValue('image_url')}
-                            alt="Preview"
-                            width={200}
-                            style={{ borderRadius: 4 }}
-                        />
-                    </div>
-                )}
-
-                {/* ✅ List images */}
-                <List
-                    grid={{ gutter: 16, column: 3 }}
-                    dataSource={projectImages}
-                    renderItem={(item) => (
-                        <List.Item>
-                            <div style={{ position: 'relative' }}>
-                                <Image src={item.image_url} alt="Project" style={{ width: '100%' }} />
-                                <div
-                                    style={{
-                                        marginTop: 8,
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <span>Order: {item.display_order}</span>
-                                    <Popconfirm
-                                        title="Delete this image?"
-                                        onConfirm={() => handleDeleteImage(item.image_id)}
-                                    >
-                                        <Button danger size="small" icon={<DeleteOutlined />} />
-                                    </Popconfirm>
-                                </div>
-                            </div>
-                        </List.Item>
-                    )}
-                />
+                    {collections?.map((col) => (
+                        <Option key={col.collection_id} value={col.collection_id}>
+                            {col.type} — {col.material_type}
+                        </Option>
+                    ))}
+                </Select>
             </Modal>
         </div>
     );
