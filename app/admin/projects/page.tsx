@@ -11,15 +11,13 @@ import {
     Space,
     message,
     Typography,
-    Image,
     Popconfirm,
-    Upload,
+    Image,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
-    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
@@ -35,7 +33,6 @@ interface Project {
     data_update: string;
     project_category: 'Residential' | 'Commercial';
     project_images?: { image_id: number; image_url: string }[];
-    collections?: { collection_id: number; type: string }[];
 }
 
 interface Collection {
@@ -44,6 +41,7 @@ interface Collection {
     material_type: string;
     status: boolean;
     image: string;
+    brand_name: string;
 }
 
 export default function ProjectsPage() {
@@ -57,30 +55,11 @@ export default function ProjectsPage() {
     const [selectedCollections, setSelectedCollections] = useState<number[]>([]);
     const [form] = Form.useForm();
 
-    // ✅ Upload Project Image
-    const [uploading, setUploading] = useState(false);
-    const [uploadedImagePath, setUploadedImagePath] = useState<string>('');
-
-    const handleUpload = async (file: File) => {
-        try {
-            setUploading(true);
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await axios.post('/api/admin/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            const path = res.data.filePath;
-            setUploadedImagePath(path);
-            message.success('Upload successful!');
-            return path;
-        } catch (err) {
-            console.error('Upload error:', err);
-            message.error('Upload failed!');
-            return '';
-        } finally {
-            setUploading(false);
-        }
-    };
+    // ✅ Filter states
+    const [searchText, setSearchText] = useState('');
+    const [filterBrand, setFilterBrand] = useState<string | null>(null);
+    const [filterType, setFilterType] = useState<string | null>(null);
+    const [filterMaterialType, setFilterMaterialType] = useState<string | null>(null);
 
     // ✅ Add/Edit Project
     const showModal = (project?: Project) => {
@@ -127,7 +106,7 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Open Modal for Managing Collections
+    // ✅ Open Collections Modal
     const openCollectionsModal = async (project_id: number) => {
         try {
             setSelectedProjectId(project_id);
@@ -140,7 +119,7 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Save selected Collections
+    // ✅ Save Selected Collections
     const handleSaveCollections = async () => {
         try {
             await axios.post('/api/admin/projectcollection', {
@@ -155,28 +134,12 @@ export default function ProjectsPage() {
         }
     };
 
+    // ✅ Columns for Project Table
     const columns = [
-        {
-            title: 'ID',
-            dataIndex: 'project_id',
-            key: 'project_id',
-            width: 70,
-        },
-        {
-            title: 'Project Name',
-            dataIndex: 'project_name',
-            key: 'project_name',
-        },
-        {
-            title: 'Category',
-            dataIndex: 'project_category',
-            key: 'project_category',
-        },
-        {
-            title: 'Last Update',
-            dataIndex: 'data_update',
-            key: 'data_update',
-        },
+        { title: 'ID', dataIndex: 'project_id', width: 70 },
+        { title: 'Project Name', dataIndex: 'project_name' },
+        { title: 'Category', dataIndex: 'project_category' },
+        { title: 'Last Update', dataIndex: 'data_update' },
         {
             title: 'Actions',
             key: 'actions',
@@ -189,10 +152,7 @@ export default function ProjectsPage() {
                         size="small"
                         onClick={() => showModal(record)}
                     />
-                    <Button
-                        size="small"
-                        onClick={() => openCollectionsModal(record.project_id)}
-                    >
+                    <Button size="small" onClick={() => openCollectionsModal(record.project_id)}>
                         Collections
                     </Button>
                     <Popconfirm
@@ -208,6 +168,50 @@ export default function ProjectsPage() {
         },
     ];
 
+    // ✅ Columns for Collections Table
+    const collectionColumns = [
+        { title: 'ID', dataIndex: 'collection_id', width: 70 },
+        { title: 'Brand', dataIndex: 'brand_name' },
+        { title: 'Type', dataIndex: 'type' },
+        { title: 'Material Type', dataIndex: 'material_type' },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            render: (status: boolean) => (status ? 'Available' : 'Not available'),
+        },
+        {
+            title: 'Preview',
+            dataIndex: 'image',
+            render: (img: string) => (
+                <Image
+                    src={img}
+                    width={80}
+                    height={60}
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+            ),
+        },
+    ];
+
+    // ✅ Apply filters & search
+    const filteredCollections = collections?.filter((c) => {
+        const matchesSearch =
+            c.type.toLowerCase().includes(searchText.toLowerCase()) ||
+            c.brand_name.toLowerCase().includes(searchText.toLowerCase()) ||
+            c.material_type.toLowerCase().includes(searchText.toLowerCase());
+
+        const matchesBrand = filterBrand ? c.brand_name === filterBrand : true;
+        const matchesType = filterType ? c.type === filterType : true;
+        const matchesMaterialType = filterMaterialType ? c.material_type === filterMaterialType : true;
+
+        return matchesSearch && matchesBrand && matchesType && matchesMaterialType;
+    });
+
+    // ✅ Extract unique filter values
+    const uniqueBrands = Array.from(new Set(collections?.map((c) => c.brand_name)));
+    const uniqueTypes = Array.from(new Set(collections?.map((c) => c.type)));
+    const uniqueMaterialTypes = Array.from(new Set(collections?.map((c) => c.material_type)));
+
     if (error) return <div>Failed to load</div>;
     if (!data) return <div>Loading...</div>;
 
@@ -220,6 +224,7 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
+            {/* ✅ Project Table */}
             <Table
                 columns={columns}
                 dataSource={data}
@@ -265,7 +270,6 @@ export default function ProjectsPage() {
                     >
                         <Input type="date" />
                     </Form.Item>
-
                 </Form>
             </Modal>
 
@@ -275,24 +279,68 @@ export default function ProjectsPage() {
                 open={isCollectionModalOpen}
                 onOk={handleSaveCollections}
                 onCancel={() => setCollectionModalOpen(false)}
-                width={600}
+                width={1000}
             >
-                <p style={{ marginBottom: 8 }}>
-                    Select collections to link with this project.
-                </p>
-                <Select
-                    mode="multiple"
-                    style={{ width: '100%' }}
-                    placeholder="Select collections"
-                    value={selectedCollections}
-                    onChange={(values) => setSelectedCollections(values)}
-                >
-                    {collections?.map((col) => (
-                        <Option key={col.collection_id} value={col.collection_id}>
-                            {col.type} — {col.material_type}
-                        </Option>
-                    ))}
-                </Select>
+                {/* 🔍 Filter Section */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <Input
+                        placeholder="Search by brand, type, or material..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        style={{ width: '30%' }}
+                    />
+                    <Select
+                        allowClear
+                        placeholder="Filter by Brand"
+                        value={filterBrand || undefined}
+                        onChange={(v) => setFilterBrand(v || null)}
+                        style={{ width: '20%' }}
+                    >
+                        {uniqueBrands.map((b) => (
+                            <Option key={b} value={b}>
+                                {b}
+                            </Option>
+                        ))}
+                    </Select>
+                    <Select
+                        allowClear
+                        placeholder="Filter by Type"
+                        value={filterType || undefined}
+                        onChange={(v) => setFilterType(v || null)}
+                        style={{ width: '20%' }}
+                    >
+                        {uniqueTypes.map((t) => (
+                            <Option key={t} value={t}>
+                                {t}
+                            </Option>
+                        ))}
+                    </Select>
+                    <Select
+                        allowClear
+                        placeholder="Filter by Material Type"
+                        value={filterMaterialType || undefined}
+                        onChange={(v) => setFilterMaterialType(v || null)}
+                        style={{ width: '20%' }}
+                    >
+                        {uniqueMaterialTypes.map((m) => (
+                            <Option key={m} value={m}>
+                                {m}
+                            </Option>
+                        ))}
+                    </Select>
+                </div>
+
+                <Table
+                    rowKey="collection_id"
+                    dataSource={filteredCollections}
+                    columns={collectionColumns}
+                    rowSelection={{
+                        selectedRowKeys: selectedCollections,
+                        onChange: (keys) => setSelectedCollections(keys as number[]),
+                    }}
+                    pagination={{ pageSize: 8 }}
+                />
             </Modal>
         </div>
     );
