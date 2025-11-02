@@ -109,7 +109,7 @@ export default function ProductFocusPage() {
 
     const showImageModal = async (focus_id: number) => {
         setSelectedFocus(focus_id);
-        setUploadedImagePath(''); // Reset uploaded image
+        setUploadedImagePath('');
         imageForm.resetFields();
         try {
             const response = await axios.get(`/api/admin/homefocus?focus_id=${focus_id}`);
@@ -123,6 +123,15 @@ export default function ProductFocusPage() {
     const handleOk = async () => {
         try {
             const values = await form.validateFields();
+
+            // ✅ ตรวจสอบว่ามีประเภทนี้อยู่แล้วหรือไม่ (เฉพาะตอนเพิ่มใหม่)
+            if (!editingFocus) {
+                const existingType = data?.find((item) => item.type === values.type);
+                if (existingType) {
+                    message.warning(`Already have a ${values.type} focus. You cannot add another one.`);
+                    return;
+                }
+            }
 
             if (editingFocus) {
                 await axios.put('/api/admin/homefocus', {
@@ -145,7 +154,6 @@ export default function ProductFocusPage() {
 
     const handleAddImage = async () => {
         try {
-            // ✅ Validate that image is uploaded
             if (!uploadedImagePath) {
                 message.error('Please upload an image first!');
                 return;
@@ -155,18 +163,15 @@ export default function ProductFocusPage() {
 
             await axios.post('/api/admin/homefocus', {
                 focus_id: selectedFocus,
-                image_url: uploadedImagePath, // ✅ Use uploaded path
+                image_url: uploadedImagePath,
                 display_order: values.display_order || 0,
                 action: 'add_image',
             });
 
             message.success('Image added successfully!');
-
-            // ✅ Reset form and image
             imageForm.resetFields();
             setUploadedImagePath('');
 
-            // ✅ Reload images
             if (selectedFocus) {
                 const response = await axios.get(`/api/admin/homefocus?focus_id=${selectedFocus}`);
                 setFocusImages(response.data.images || []);
@@ -260,18 +265,40 @@ export default function ProductFocusPage() {
     if (error) return <div>Failed to load</div>;
     if (!data) return <div>Loading...</div>;
 
+    // ✅ LIMIT Surface + Furnishing อย่างละ 1
+    const limitedData = [
+        ...data.filter((item) => item.type === 'Surface').slice(0, 1),
+        ...data.filter((item) => item.type === 'Furnishing').slice(0, 1),
+    ];
+
+    // ✅ ตรวจสอบว่ามีครบหรือยัง
+    const hasSurface = data.some((d) => d.type === 'Surface');
+    const hasFurnishing = data.some((d) => d.type === 'Furnishing');
+
+    // ✅ ปุ่มเพิ่ม จะไม่สามารถกดได้ถ้ามีครบทั้งสองประเภทแล้ว
+    const canAdd = !(hasSurface && hasFurnishing);
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Title level={2}>Product Focus Management</Title>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => showModal()}
+                    disabled={!canAdd} // ❌ ปิดปุ่มเมื่อมีครบทั้งสองประเภท
+                >
                     Add Product Focus
                 </Button>
             </div>
 
-            <Table columns={columns} dataSource={data} rowKey="focus_id" pagination={{ pageSize: 10 }} />
+            <Table
+                columns={columns}
+                dataSource={limitedData}
+                rowKey="focus_id"
+                pagination={false}
+            />
 
-            {/* Modal: Add/Edit Focus */}
             <Modal
                 title={editingFocus ? 'Edit Product Focus' : 'Add Product Focus'}
                 open={isModalOpen}
@@ -306,9 +333,11 @@ export default function ProductFocusPage() {
                     </Form.Item>
 
                     <Form.Item label="Type" name="type" rules={[{ required: true }]}>
-                        <Select>
-                            <Select.Option value="Surface">Surface</Select.Option>
-                            <Select.Option value="Furnishing">Furnishing</Select.Option>
+                        <Select
+                            disabled={hasSurface && !hasFurnishing ? false : hasFurnishing && !hasSurface ? false : true}
+                        >
+                            {!hasSurface && <Select.Option value="Surface">Surface</Select.Option>}
+                            {!hasFurnishing && <Select.Option value="Furnishing">Furnishing</Select.Option>}
                         </Select>
                     </Form.Item>
 
@@ -318,7 +347,7 @@ export default function ProductFocusPage() {
                 </Form>
             </Modal>
 
-            {/* Modal: Manage Focus Images */}
+            {/* ✅ Manage Images Modal */}
             <Modal
                 title="Manage Focus Images"
                 open={isImageModalOpen}
@@ -330,7 +359,6 @@ export default function ProductFocusPage() {
                 footer={null}
                 width={800}
             >
-                {/* ✅ Upload Form */}
                 <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
                     <Form form={imageForm} layout="vertical">
                         <Form.Item label="Upload Image" required>
@@ -340,11 +368,8 @@ export default function ProductFocusPage() {
                                 accept="image/*"
                                 customRequest={async ({ file, onSuccess, onError }) => {
                                     const success = await handleUpload(file as File);
-                                    if (success) {
-                                        onSuccess && onSuccess('ok');
-                                    } else {
-                                        onError && onError(new Error('Upload failed'));
-                                    }
+                                    if (success) onSuccess && onSuccess('ok');
+                                    else onError && onError(new Error('Upload failed'));
                                 }}
                             >
                                 <Button icon={<UploadOutlined />} loading={uploading}>
@@ -352,20 +377,13 @@ export default function ProductFocusPage() {
                                 </Button>
                             </Upload>
 
-                            {/* ✅ Image Preview */}
                             {uploadedImagePath && (
                                 <div style={{ marginTop: 16 }}>
-                                    <Image
-                                        src={uploadedImagePath}
-                                        alt="Preview"
-                                        width={200}
-                                        style={{ borderRadius: 6 }}
-                                    />
+                                    <Image src={uploadedImagePath} alt="Preview" width={200} style={{ borderRadius: 6 }} />
                                 </div>
                             )}
                         </Form.Item>
 
-                        {/* ✅ Hidden field to store image URL */}
                         <Form.Item name="image_url" hidden>
                             <Input />
                         </Form.Item>
@@ -387,7 +405,6 @@ export default function ProductFocusPage() {
                     </Form>
                 </div>
 
-                {/* ✅ Images List */}
                 <div>
                     <Title level={5}>Current Images</Title>
                     <List
@@ -403,15 +420,17 @@ export default function ProductFocusPage() {
                                             width: '100%',
                                             height: 150,
                                             objectFit: 'cover',
-                                            borderRadius: 4
+                                            borderRadius: 4,
                                         }}
                                     />
-                                    <div style={{
-                                        marginTop: 8,
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
+                                    <div
+                                        style={{
+                                            marginTop: 8,
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}
+                                    >
                                         <span>Order: {item.display_order}</span>
                                         <Popconfirm
                                             title="Delete this image?"
