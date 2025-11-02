@@ -8,14 +8,14 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const folder = formData.get("folder") as string; // ✅ รับค่า folder (surface, furnishing, focus, etc.)
+    const folder = formData.get("folder") as string; // ✅ รับค่า folder (admin, furnishing, focus, etc.)
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // ✅ กำหนด subfolder (default = surface)
-    const subFolder = folder || "surface";
+    // ✅ กำหนด subfolder (default = admin)
+    const subFolder = folder || "admin";
     
     // ✅ ตั้งโฟลเดอร์เก็บรูป
     const uploadDir = path.join(process.cwd(), "public", "uploads", subFolder);

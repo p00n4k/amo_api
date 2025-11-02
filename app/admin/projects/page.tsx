@@ -13,11 +13,14 @@ import {
     Typography,
     Popconfirm,
     Image,
+    Upload,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
+    PictureOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
@@ -45,17 +48,31 @@ interface Collection {
 }
 
 export default function ProjectsPage() {
-    const { data, error, mutate } = useSWR<Project[]>('/api/admin/project', fetcher);
-    const { data: collections } = useSWR<Collection[]>('/api/admin/collection', fetcher);
+    const { data: projects, error, mutate } = useSWR<Project[]>('/api/admin/project', fetcher);
+    const { data: collectionsData } = useSWR('/api/admin/collection', fetcher);
+
+    // ✅ ปรับให้รองรับทุกแบบ (array หรือ object)
+    const collections: Collection[] = Array.isArray(collectionsData)
+        ? collectionsData
+        : collectionsData?.collections || [];
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCollectionModalOpen, setCollectionModalOpen] = useState(false);
+    const [isImageModalOpen, setImageModalOpen] = useState(false);
+
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [selectedCollections, setSelectedCollections] = useState<number[]>([]);
+    const [selectedProjectImages, setSelectedProjectImages] = useState<
+        { image_id: number; image_url: string }[]
+    >([]);
+
+    const [uploading, setUploading] = useState(false);
+    const [uploadedPath, setUploadedPath] = useState<string>('');
+
     const [form] = Form.useForm();
 
-    // ✅ Filter states
+    // ✅ Filters
     const [searchText, setSearchText] = useState('');
     const [filterBrand, setFilterBrand] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<string | null>(null);
@@ -106,7 +123,7 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Open Collections Modal
+    // ✅ Collections Modal
     const openCollectionsModal = async (project_id: number) => {
         try {
             setSelectedProjectId(project_id);
@@ -119,7 +136,6 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Save Selected Collections
     const handleSaveCollections = async () => {
         try {
             await axios.post('/api/admin/projectcollection', {
@@ -134,7 +150,69 @@ export default function ProjectsPage() {
         }
     };
 
-    // ✅ Columns for Project Table
+    // ✅ Image modal functions
+    const openImageModal = async (project_id: number) => {
+        setSelectedProjectId(project_id);
+        try {
+            const res = await axios.get(`/api/admin/project?project_id=${project_id}`);
+            setSelectedProjectImages(res.data.project_images || []);
+            setImageModalOpen(true);
+        } catch {
+            message.error('Failed to load project images!');
+        }
+    };
+
+    const handleUpload = async (file: File) => {
+        try {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', file); // ใช้ default path (ยังไม่ระบุ folder)
+
+            const res = await axios.post('/api/admin/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const filePath = res.data?.filePath;
+            setUploadedPath(filePath);
+            message.success('Upload successful!');
+        } catch (error) {
+            message.error('Upload failed!');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleAddImage = async () => {
+        if (!uploadedPath) return message.error('Please upload an image first!');
+        try {
+            await axios.post('/api/admin/project', {
+                action: 'add_image',
+                project_id: selectedProjectId,
+                image_url: uploadedPath,
+            });
+            message.success('Image added successfully!');
+            setUploadedPath('');
+            const res = await axios.get(`/api/admin/project?project_id=${selectedProjectId}`);
+            setSelectedProjectImages(res.data.project_images || []);
+        } catch {
+            message.error('Add image failed!');
+        }
+    };
+
+    const handleDeleteImage = async (image_id: number) => {
+        try {
+            await axios.delete('/api/admin/project', {
+                data: { action: 'delete_image', image_id },
+            });
+            message.success('Image deleted!');
+            const res = await axios.get(`/api/admin/project?project_id=${selectedProjectId}`);
+            setSelectedProjectImages(res.data.project_images || []);
+        } catch {
+            message.error('Delete failed!');
+        }
+    };
+
+    // ✅ Columns
     const columns = [
         { title: 'ID', dataIndex: 'project_id', width: 70 },
         { title: 'Project Name', dataIndex: 'project_name' },
@@ -143,7 +221,7 @@ export default function ProjectsPage() {
         {
             title: 'Actions',
             key: 'actions',
-            width: 250,
+            width: 300,
             render: (_: any, record: Project) => (
                 <Space>
                     <Button
@@ -155,11 +233,16 @@ export default function ProjectsPage() {
                     <Button size="small" onClick={() => openCollectionsModal(record.project_id)}>
                         Collections
                     </Button>
+                    <Button
+                        icon={<PictureOutlined />}
+                        size="small"
+                        onClick={() => openImageModal(record.project_id)}
+                    >
+                        Images
+                    </Button>
                     <Popconfirm
                         title="Delete this project?"
                         onConfirm={() => handleDelete(record.project_id)}
-                        okText="Yes"
-                        cancelText="No"
                     >
                         <Button danger icon={<DeleteOutlined />} size="small" />
                     </Popconfirm>
@@ -168,7 +251,6 @@ export default function ProjectsPage() {
         },
     ];
 
-    // ✅ Columns for Collections Table
     const collectionColumns = [
         { title: 'ID', dataIndex: 'collection_id', width: 70 },
         { title: 'Brand', dataIndex: 'brand_name' },
@@ -193,8 +275,8 @@ export default function ProjectsPage() {
         },
     ];
 
-    // ✅ Apply filters & search
-    const filteredCollections = collections?.filter((c) => {
+    // ✅ Filter logic
+    const filteredCollections = collections.filter((c) => {
         const matchesSearch =
             c.type.toLowerCase().includes(searchText.toLowerCase()) ||
             c.brand_name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -202,18 +284,19 @@ export default function ProjectsPage() {
 
         const matchesBrand = filterBrand ? c.brand_name === filterBrand : true;
         const matchesType = filterType ? c.type === filterType : true;
-        const matchesMaterialType = filterMaterialType ? c.material_type === filterMaterialType : true;
+        const matchesMaterialType = filterMaterialType
+            ? c.material_type === filterMaterialType
+            : true;
 
         return matchesSearch && matchesBrand && matchesType && matchesMaterialType;
     });
 
-    // ✅ Extract unique filter values
-    const uniqueBrands = Array.from(new Set(collections?.map((c) => c.brand_name)));
-    const uniqueTypes = Array.from(new Set(collections?.map((c) => c.type)));
-    const uniqueMaterialTypes = Array.from(new Set(collections?.map((c) => c.material_type)));
+    const uniqueBrands = Array.from(new Set(collections.map((c) => c.brand_name)));
+    const uniqueTypes = Array.from(new Set(collections.map((c) => c.type)));
+    const uniqueMaterialTypes = Array.from(new Set(collections.map((c) => c.material_type)));
 
     if (error) return <div>Failed to load</div>;
-    if (!data) return <div>Loading...</div>;
+    if (!projects) return <div>Loading...</div>;
 
     return (
         <div>
@@ -224,10 +307,9 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
-            {/* ✅ Project Table */}
             <Table
                 columns={columns}
-                dataSource={data}
+                dataSource={projects}
                 rowKey="project_id"
                 pagination={{ pageSize: 10 }}
             />
@@ -281,7 +363,6 @@ export default function ProjectsPage() {
                 onCancel={() => setCollectionModalOpen(false)}
                 width={1000}
             >
-                {/* 🔍 Filter Section */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <Input
                         placeholder="Search by brand, type, or material..."
@@ -341,6 +422,69 @@ export default function ProjectsPage() {
                     }}
                     pagination={{ pageSize: 8 }}
                 />
+            </Modal>
+
+            {/* ✅ Manage Project Images Modal */}
+            <Modal
+                title="Manage Project Images"
+                open={isImageModalOpen}
+                onCancel={() => setImageModalOpen(false)}
+                footer={null}
+                width={800}
+            >
+                <Upload
+                    name="file"
+                    showUploadList={false}
+                    customRequest={async ({ file, onSuccess }) => {
+                        await handleUpload(file as File);
+                        onSuccess && onSuccess('ok');
+                    }}
+                >
+                    <Button icon={<UploadOutlined />} loading={uploading}>
+                        Upload New Image
+                    </Button>
+                </Upload>
+
+                {uploadedPath && (
+                    <div style={{ marginTop: 16 }}>
+                        <Image src={uploadedPath} alt="Preview" width={200} />
+                        <Button
+                            type="primary"
+                            onClick={handleAddImage}
+                            style={{ display: 'block', marginTop: 8 }}
+                        >
+                            Add to Project
+                        </Button>
+                    </div>
+                )}
+
+                <div style={{ marginTop: 24 }}>
+                    <Title level={5}>Current Images</Title>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                        {selectedProjectImages.map((img) => (
+                            <div key={img.image_id} style={{ position: 'relative' }}>
+                                <Image
+                                    src={img.image_url}
+                                    width={150}
+                                    height={100}
+                                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                                />
+                                <Popconfirm
+                                    title="Delete this image?"
+                                    onConfirm={() => handleDeleteImage(img.image_id)}
+                                >
+                                    <Button
+                                        danger
+                                        size="small"
+                                        style={{ position: 'absolute', top: 4, right: 4 }}
+                                    >
+                                        X
+                                    </Button>
+                                </Popconfirm>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </Modal>
         </div>
     );
