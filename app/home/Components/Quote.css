@@ -1,0 +1,41 @@
+.quote {
+  background-color: #444; /* เทาเข้มตามภาพ */
+  color: #fff;
+  text-align: center;
+  padding: 120px 20px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.quote__content {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.quote__title {
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.quote__subtitle {
+  font-size: 1.3rem;
+  font-weight: 300;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+.quote__highlight {
+  font-weight: 700;
+  font-style: italic;
+  color: #fff;
+}
+
+.quote__mark {
+  font-size: 4rem;
+  color: #fff;
+  font-weight: 700;
+  font-family: serif;
+  margin-top: 40px;
+}
