@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -18,6 +18,8 @@ interface ProductFocus {
 export default function SignatureCollections() {
     const [data, setData] = useState<ProductFocus | null>(null);
     const [activeType, setActiveType] = useState<"surface" | "furnishing">("surface");
+    const [activeIndex, setActiveIndex] = useState(0);
+    const sliderRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,12 +27,22 @@ export default function SignatureCollections() {
                 const res = await fetch(`http://localhost:3000/api/productfocus/${activeType}`);
                 const json = await res.json();
                 setData(json);
+                setActiveIndex(0);
             } catch (error) {
                 console.error("Error fetching product focus:", error);
             }
         };
         fetchData();
     }, [activeType]);
+
+    const scrollToIndex = (index: number) => {
+        const slider = sliderRef.current;
+        if (!slider) return;
+        const child = slider.children[index] as HTMLElement;
+        if (child) {
+            child.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+    };
 
     if (!data)
         return <div className="text-center py-20 text-gray-400">Loading...</div>;
@@ -50,7 +62,7 @@ export default function SignatureCollections() {
                         <button
                             onClick={() => setActiveType("surface")}
                             className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "surface"
-                                    ? "bg-orange-400 text-white border-orange-400 shadow-md"
+                                    ? "bg-orange-400 text-white border-orange-400"
                                     : "text-gray-700 border-gray-300 hover:border-orange-400"
                                 }`}
                         >
@@ -59,7 +71,7 @@ export default function SignatureCollections() {
                         <button
                             onClick={() => setActiveType("furnishing")}
                             className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "furnishing"
-                                    ? "bg-orange-400 text-white border-orange-400 shadow-md"
+                                    ? "bg-orange-400 text-white border-orange-400"
                                     : "text-gray-700 border-gray-300 hover:border-orange-400"
                                 }`}
                         >
@@ -69,7 +81,7 @@ export default function SignatureCollections() {
                 </div>
 
                 {/* ===== CONTENT CARD ===== */}
-                <div className="bg-white rounded-2xl shadow-sm p-10 md:p-12">
+                <div className="bg-white rounded-2xl p-10 md:p-12">
                     <div className="flex flex-col md:flex-row gap-8 items-start">
                         {/* --- Brand Info --- */}
                         <div className="md:w-1/3">
@@ -103,44 +115,58 @@ export default function SignatureCollections() {
                             </Link>
                         </div>
 
-                        {/* --- Image Gallery --- */}
-                        <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {data.images.map((img, i) => (
-                                <div
-                                    key={i}
-                                    className="relative rounded-2xl overflow-hidden group cursor-pointer"
-                                >
-                                    <Image
-                                        src={img}
-                                        alt={`${data.collection_name}-${i}`}
-                                        width={500}
-                                        height={500}
-                                        className="object-cover w-full h-64 transition-transform duration-500 group-hover:scale-105"
-                                    />
-
-                                    {/* Overlay for first image */}
-                                    {i === 0 && (
-                                        <div className="absolute inset-0 flex flex-col justify-between p-6 text-white bg-black/30">
-                                            <h3 className="text-5xl font-extrabold tracking-tight uppercase drop-shadow-md">
-                                                {data.collection_name.split(" ")[0]}
-                                            </h3>
-                                            <div className="flex items-center gap-3">
-                                                <Link
-                                                    href={data.link}
-                                                    target="_blank"
-                                                    className="bg-white text-orange-500 text-sm font-medium px-5 py-2 rounded-full hover:bg-orange-500 hover:text-white transition"
-                                                >
-                                                    Take a Look Here
-                                                </Link>
-                                            </div>
+                        {/* --- Image Slider --- */}
+                        <div className="md:w-2/3 relative rounded-3xl overflow-hidden bg-white">
+                            <div
+                                ref={sliderRef}
+                                className="flex items-center justify-center overflow-x-auto gap-4 snap-x snap-mandatory scroll-smooth pb-6 scrollbar-hide"
+                            >
+                                {data.images.map((img, i) => {
+                                    const isActive = i === activeIndex;
+                                    return (
+                                        <div
+                                            key={i}
+                                            onClick={() => {
+                                                setActiveIndex(i);
+                                                scrollToIndex(i);
+                                            }}
+                                            className={`relative snap-center transition-all duration-700 ease-in-out cursor-pointer ${isActive
+                                                    ? "z-20 scale-100"
+                                                    : "opacity-70 hover:opacity-90 z-10"
+                                                }`}
+                                            style={{
+                                                flex: isActive ? "0 0 60%" : "0 0 20%",
+                                                height: "480px",
+                                                borderRadius: "1.5rem",
+                                                transform: isActive ? "scale(1)" : "scale(0.95)",
+                                            }}
+                                        >
+                                            <Image
+                                                src={img}
+                                                alt={`${data.collection_name}-${i}`}
+                                                width={800}
+                                                height={600}
+                                                className="object-cover w-full h-full"
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* 🧩 Hide Scrollbar */}
+            <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
         </section>
     );
 }

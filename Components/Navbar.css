@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+/* Navbar container */
+.navbar-container {
+  @apply flex justify-center w-full my-7 bg-transparent;
+}
+
+/* Navbar */
+.navbar {
+  @apply w-full mx-[50px] px-12 py-4 bg-white  rounded-full;
+}
+
+/* Navbar content */
+.navbar-content {
+  @apply flex justify-between items-center relative;
+}
+
+/* Left navigation */
+.navbar-left {
+  @apply flex;
+}
+
+.navbar-left .nav-link {
+  @apply mr-4;
+}
+
+/* Navigation links */
+.nav-link {
+  @apply text-gray-600 px-3 py-2 text-base font-medium;
+}
+
+.nav-link:hover {
+  @apply text-black font-bold;
+}
+
+/* Logo */
+.navbar-logo {
+  @apply absolute left-1/2 transform -translate-x-1/2;
+}
+
+.logo-text {
+  @apply text-black font-serif font-bold text-3xl tracking-wider;
+}
+
+/* Right navigation */
+.navbar-right {
+  @apply flex items-center;
+}
+
+.navbar-right {
+  @apply ml-4;
+}
+
+/* Icon link */
+.icon-link {
+  @apply flex items-center px-3 py-2 rounded-full transition-all;
+}
+
+.icon-link:hover {
+  @apply bg-gray-300;
+}
+
+.icon {
+  @apply h-7 w-7;
+}
+
+.icon {
+  @apply h-6 w-6;
+}
+
+/* CTA Button */
+.cta-button {
+  @apply text-gray-600 bg-amber-400 px-3 py-2 text-base font-medium rounded-full;
+}
+
+.cta-button:hover {
+  @apply text-black;
+}
+
+.hidden_line {
+  @apply hidden group-hover:inline ml-2 text-gray-800 bg-gray-300 px-3 py-0 rounded-full text-base font-medium;
+}

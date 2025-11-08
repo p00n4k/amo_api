@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MapPin } from "lucide-react";
 
 interface Project {
     project_id: number;
     project_name: string;
     data_update: string;
     project_category: string;
+    cover_image: string;
 }
 
 export default function LastProjects() {
@@ -16,7 +18,7 @@ export default function LastProjects() {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                const res = await fetch("http://localhost:3000/api/lastproject");
+                const res = await fetch("/api/lastproject");
                 const data = await res.json();
                 setProjects(data);
             } catch (error) {
@@ -30,82 +32,124 @@ export default function LastProjects() {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString("en-GB", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
+        return isNaN(date.getTime())
+            ? "N/A"
+            : date.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            });
     };
 
     return (
-        <div className="bg-gray-600 p-8 max-w mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto p-6 rounded-lg">
-                {loading ? (
-                    [...Array(4)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="bg-white rounded-xl shadow-md overflow-hidden flex animate-pulse"
-                        >
-                            <div className="w-1/2 bg-gray-300 h-48"></div>
-                            <div className="w-1/2 p-5 bg-neutral-100 space-y-3">
-                                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-                                <div className="h-3 bg-gray-300 rounded w-full"></div>
-                            </div>
+        <section className="min-h-screen bg-[#3A3A3A] py-12 px-4 sm:px-6 lg:px-8">
+            {/* Header Section */}
+            <div className="max-w-7xl mx-auto mb-16">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+                    <div className="flex-1">
+                        <h2 className="text-white text-sm md:text-base font-light mb-2 leading-relaxed max-w-md">
+                            Let us craft a place where trust<br />and style come together
+                        </h2>
+                        <div className="flex items-center gap-4">
+                            <p className="text-white/70 text-xs md:text-sm">
+                                Making your home uniquely yours.
+                            </p>
+                            <button
+                                className="bg-[#F7931E] hover:bg-[#fba63c] text-white rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105"
+                            >
+                                View more
+                            </button>
                         </div>
-                    ))
-                ) : projects.length > 0 ? (
-                    projects.map((project) => (
-                        <div
-                            key={project.project_id}
-                            className="bg-white rounded-xl shadow-md overflow-hidden flex hover:shadow-lg transition-shadow cursor-pointer"
-                        >
-                            <div className="w-1/2 relative">
-                                <img
-                                    src="/images/01_pd_focus_atlasconcorde.jpg"
-                                    alt={project.project_name}
-                                    className="object-cover h-full w-full"
-                                />
-                            </div>
-
-                            <div className="w-1/2 p-5 bg-neutral-100">
-                                <div className="mb-4">
-                                    <div className="flex items-center space-x-2 text-sm text-gray-700">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="h-4 w-4 text-black"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
-                                            />
-                                        </svg>
-                                        <span className="font-medium">{project.project_name}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {formatDate(project.data_update)}
-                                    </p>
-                                </div>
-                                <div className="text-sm space-y-2">
-                                    <div>
-                                        <p className="font-semibold text-gray-700">Category</p>
-                                        <p className="text-gray-500">{project.project_category}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="col-span-2 text-center text-white py-10">
-                        <p className="text-xl">No projects available</p>
                     </div>
-                )}
+                    <h1 className="text-[150px] leading-none font-bold text-white/10">
+                        Project
+                    </h1>
+                </div>
             </div>
-        </div>
+
+            {/* Projects Grid */}
+            <div className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {loading ? (
+                        [...Array(4)].map((_, i) => (
+                            <div
+                                key={i}
+                                className="bg-[#F6F0E8] rounded-3xl overflow-hidden shadow-lg animate-pulse"
+                            >
+                                <div className="flex flex-col sm:flex-row h-full">
+                                    <div className="sm:w-1/2 bg-gray-200 h-64 sm:h-auto"></div>
+                                    <div className="sm:w-1/2 p-6 space-y-4">
+                                        <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                                        <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                                        <div className="h-3 bg-gray-300 rounded w-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : projects.length > 0 ? (
+                        projects.map((project, index) => (
+                            <div
+                                key={`${project.project_id}-${index}`}
+                                className="bg-[#F6F0E8] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
+                            >
+                                <div className="flex flex-col sm:flex-row h-full">
+                                    {/* Project Image */}
+                                    <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-auto">
+                                        <img
+                                            src={`http://localhost:3000${project.cover_image || "/uploads/default.jpg"}`}
+                                            alt={project.project_name}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        />
+                                    </div>
+
+                                    {/* Project Info */}
+                                    <div className="sm:w-1/2 p-6 sm:p-8 bg-[#F6F0E8] flex flex-col justify-between relative">
+                                        <div className="space-y-4">
+                                            <div className="flex items-start gap-2">
+                                                <MapPin className="w-5 h-5 text-[#3A3A3A]/60 flex-shrink-0 mt-0.5" />
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-[#3A3A3A]">
+                                                        {project.project_name}
+                                                    </h3>
+                                                    <p className="text-sm text-[#3A3A3A]/60">
+                                                        {formatDate(project.data_update)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-4 border-t border-[#3A3A3A]/10">
+                                                <p className="text-sm font-medium text-[#3A3A3A] mb-1">
+                                                    Primary Material
+                                                </p>
+                                                <p className="text-sm text-[#3A3A3A]/70">
+                                                    {project.project_category}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Pagination Dots */}
+                                        <div className="flex gap-2 mt-6">
+                                            {[...Array(3)].map((_, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`h-1.5 rounded-full transition-all ${i === 0
+                                                        ? "w-8 bg-[#F7931E]"
+                                                        : "w-1.5 bg-[#3A3A3A]/30"
+                                                        }`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-2 text-center py-16">
+                            <p className="text-white/60 text-lg">No projects available</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </section>
     );
 }
