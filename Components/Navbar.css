@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+
 /* Navbar container */
 .navbar-container {
   @apply flex justify-center w-full my-7 bg-transparent;
@@ -6,7 +7,7 @@
 
 /* Navbar */
 .navbar {
-  @apply w-full mx-[50px] px-12 py-4 bg-white  rounded-full;
+  @apply w-full mx-[50px] px-12 py-4 bg-white rounded-full;
 }
 
 /* Navbar content */
@@ -25,11 +26,31 @@
 
 /* Navigation links */
 .nav-link {
-  @apply text-gray-600 px-3 py-2 text-base font-medium;
+  @apply text-gray-600 px-3 py-2 text-base font-medium transition-all;
+  position: relative;
+  overflow: hidden;
 }
 
+/* Hover text change */
 .nav-link:hover {
   @apply text-black font-bold;
+}
+
+/* Hover underline animation */
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0%;
+  height: 2px;
+  background-color: black;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.nav-link:hover::after {
+  width: 100%;
 }
 
 /* Logo */
@@ -43,11 +64,7 @@
 
 /* Right navigation */
 .navbar-right {
-  @apply flex items-center;
-}
-
-.navbar-right {
-  @apply ml-4;
+  @apply flex items-center ml-4;
 }
 
 /* Icon link */
@@ -60,22 +77,33 @@
 }
 
 .icon {
-  @apply h-7 w-7;
+  @apply h-6 w-6;
 }
 
-.icon {
-  @apply h-6 w-6;
+/* Text slide-out for LINE icon (fixed version) */
+.hidden_line {
+  @apply text-base font-medium text-gray-800 bg-gray-300 rounded-full;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(6px);
+  transition: all 0.3s ease;
+}
+
+.icon-link:hover .hidden_line {
+  opacity: 1;
+  width: auto;
+  padding-left: 8px;
+  padding-right: 8px;
+  transform: translateX(0);
 }
 
 /* CTA Button */
 .cta-button {
-  @apply text-gray-600 bg-amber-400 px-3 py-2 text-base font-medium rounded-full;
+  @apply text-gray-600 bg-amber-400 px-3 py-2 text-base font-medium rounded-full transition-all;
 }
 
 .cta-button:hover {
   @apply text-black;
-}
-
-.hidden_line {
-  @apply hidden group-hover:inline ml-2 text-gray-800 bg-gray-300 px-3 py-0 rounded-full text-base font-medium;
 }
