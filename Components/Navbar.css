@@ -64,7 +64,7 @@
 
 /* Right navigation */
 .navbar-right {
-  @apply flex items-center ml-4;
+  @apply flex items-center ml-4 gap-5;
 }
 
 /* Icon link */

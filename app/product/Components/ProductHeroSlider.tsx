@@ -2,98 +2,130 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import ProductGallery from "./ProductGallery";
 
-export default function ProductHeroSlider() {
-    const [images, setImages] = useState<string[]>([]);
-    const [collectionName, setCollectionName] = useState("");
-    const [brandName, setBrandName] = useState("");
-    const [link, setLink] = useState("#");
-    const [currentIndex, setCurrentIndex] = useState(0);
+export default function ProductPage() {
+    const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0); // ✅ สำหรับ slider
 
     useEffect(() => {
-        const fetchData = async () => {
+        const loadProduct = async () => {
             try {
-                const res = await fetch("http://localhost:3000/api/productmain");
+                const res = await fetch("/api/admin/productmain", { cache: "no-store" });
                 const data = await res.json();
+                const item = Array.isArray(data) ? data[0] : data;
 
-                setCollectionName(data.collection_name);
-                setBrandName(data.brand_name);
-                setLink(data.link);
-                setImages(data.images || []);
-            } catch (error) {
-                console.error("Error:", error);
-                setImages(["/images/01_pd_focus_atlasconcorde.jpg"]);
+                if (item) {
+                    item.images = item.images?.map((img: any) => img.image_url) || [];
+                    setProduct(item);
+                }
+            } catch (e) {
+                console.error(e);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
+        loadProduct();
     }, []);
 
+    // ✅ Auto Slide (ทุก 5 วินาที)
     useEffect(() => {
-        if (images.length <= 1) return;
+        if (!product?.images || product.images.length < 2) return;
         const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % images.length);
+            setCurrentIndex((prev) => (prev + 1) % product.images.length);
         }, 5000);
-        return () => clearInterval(interval);
-    }, [images.length]);
 
-    const goToSlide = (index: number) => {
-        setCurrentIndex(index);
-    };
+        return () => clearInterval(interval);
+    }, [product]);
+
+    if (loading) return <div className="w-full h-screen bg-gray-300 animate-pulse" />;
 
     return (
-        <div className="relative w-full h-screen overflow-hidden">
+        <div>
+            {/* ✅ Hero Slider */}
+            <div className="relative w-full h-screen overflow-hidden">
+                {product?.images?.map((img: string, index: number) => (
+                    <Image
+                        key={index}
+                        src={img}
+                        alt={product.collection_name}
+                        fill
+                        className={`object-cover absolute inset-0 transition-opacity duration-1000 ${index === currentIndex ? "opacity-100" : "opacity-0"
+                            }`}
+                    />
+                ))}
 
-            {loading ? (
-                <div className="h-screen flex items-center justify-center bg-gray-200 text-gray-600">
-                    Loading...
-                </div>
-            ) : (
-                <>
-                    {images.map((image, idx) => (
-                        <div
-                            key={idx}
-                            className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentIndex ? "opacity-100" : "opacity-0"
-                                }`}
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center text-white text-center px-4 z-10">
+                    <h1 className="text-6xl md:text-7xl font-bold mb-2">
+                        {product?.collection_name}
+                    </h1>
+
+                    <h2 className="text-3xl md:text-4xl font-light mb-8">
+                        {product?.brand_name}
+                    </h2>
+
+                    <div className="flex gap-4">
+                        <a
+                            href={product?.link || "#"}
+                            className="bg-white text-black font-semibold px-6 py-2 rounded-full shadow hover:bg-gray-200 transition"
                         >
-                            <Image src={image} fill alt="" className="object-cover" />
-                        </div>
-                    ))}
+                            Take a Look Here
+                        </a>
 
-                    {/* Overlay Content */}
-                    <div className="absolute inset-0 bg-black/30 z-10 flex flex-col items-center justify-center text-white text-center px-4">
-                        <h1 className="text-6xl md:text-7xl font-bold mb-2">
-                            {collectionName}
-                        </h1>
-                        <h2 className="text-3xl md:text-4xl font-light mb-8">
-                            {brandName}
-                        </h2>
-
-                        <a href={link} target="_blank" rel="noopener noreferrer">
-                            <button className="bg-white text-orange-600 font-semibold px-6 py-2 rounded-full shadow hover:bg-orange-100 transition">
-                                Take a Look Here
-                            </button>
+                        <a
+                            href="#product-gallery"
+                            className="bg-white/20 border border-white text-white px-6 py-2 rounded-full hover:bg-white/30 transition flex items-center gap-1"
+                        >
+                            Discover our products <span className="text-xl">↓</span>
                         </a>
                     </div>
+                </div>
 
-                    {/* Indicator */}
-                    {images.length > 1 && (
-                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                            {images.map((_, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => goToSlide(index)}
-                                    className={`w-3 h-3 rounded-full transition ${index === currentIndex ? "bg-white w-8" : "bg-white/50"
-                                        }`}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </>
-            )}
+                {/* ✅ Slide Controls */}
+                {product?.images?.length > 1 && (
+                    <>
+                        <button
+                            onClick={() =>
+                                setCurrentIndex(
+                                    (prev) => (prev - 1 + product.images.length) % product.images.length
+                                )
+                            }
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-3xl z-20 hover:text-gray-300"
+                        >
+                            ‹
+                        </button>
+
+                        <button
+                            onClick={() =>
+                                setCurrentIndex((prev) => (prev + 1) % product.images.length)
+                            }
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl z-20 hover:text-gray-300"
+                        >
+                            ›
+                        </button>
+                    </>
+                )}
+            </div>
+
+            {/* ✅ Banner Section */}
+            <div className="bg-[#3a3a3a] px-4 py-6 flex justify-center items-center">
+                <div className="w-full max-w-7xl h-[150px] rounded-xl overflow-hidden shadow-lg relative">
+                    <Image
+                        src="/static/banner.png"
+                        alt="Tile Banner"
+                        fill
+                        className="object-cover"
+                    />
+                </div>
+            </div>
+
+            {/* ✅ Product Gallery */}
+            <div id="product-gallery">
+                <ProductGallery />
+            </div>
         </div>
     );
 }

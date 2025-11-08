@@ -1,112 +1,97 @@
-// ============================================
-// 📁 File: components/Surface.tsx (Updated)
-// ============================================
 'use client';
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-interface FocusProduct {
-    collection_id: number;
+interface SurfaceItem {
+    item_id: number;
     image: string;
-    brandname: string;
-    type: string;
-    collection_link: string;
+    link: string;
 }
 
 const Surface = () => {
-    const [focusProducts, setFocusProducts] = useState<FocusProduct[]>([]);
+    const [surfaceItems, setSurfaceItems] = useState<SurfaceItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchFocusProducts();
+        fetchSurfaceItems();
     }, []);
 
-    const fetchFocusProducts = async () => {
+    const fetchSurfaceItems = async () => {
         try {
-            // เรียก API ใหม่ที่เฉพาะเจาะจง
-            const response = await fetch('/api/products/focus/surface');
+            const response = await fetch('/api/productsurface', { cache: 'no-store' });
             const data = await response.json();
-            setFocusProducts(data);
+            setSurfaceItems(data);
         } catch (error) {
-            console.error('Error fetching focus products:', error);
+            console.error('Error fetching surface items:', error);
         } finally {
             setLoading(false);
         }
     };
 
+    // ✅ แยก: ตัวแรก -> ภาพใหญ่ขวา / 4 ตัวแรก -> ฝั่งซ้าย
+    const bigCard = surfaceItems[0];
+    const smallCards = surfaceItems.slice(1, 5);
+
     return (
         <div className="mb-16">
             <h2 className="text-2xl font-semibold mb-6">Surface</h2>
             <div className="grid grid-cols-3 gap-6">
-                {/* Left side 2x2 cards - Focus Products */}
+
+                {/* ✅ Left 2x2 Grid */}
                 <div className="grid grid-cols-2 grid-rows-2 gap-6 col-span-2">
                     {loading ? (
                         Array(4).fill(0).map((_, idx) => (
-                            <div key={idx} className="relative bg-white/5 rounded-xl overflow-hidden animate-pulse">
-                                <div className="w-full h-full bg-gray-300 aspect-square"></div>
-                            </div>
+                            <div key={idx} className="bg-white/5 rounded-xl animate-pulse aspect-square" />
                         ))
-                    ) : focusProducts.length > 0 ? (
-                        focusProducts.map((product) => (
+                    ) : smallCards.length > 0 ? (
+                        smallCards.map((item) => (
                             <Link
-                                key={product.collection_id}
-                                href={product.collection_link || '/productsearch'}
+                                key={item.item_id}
+                                href={item.link || '#'}
                                 className="relative bg-white/5 rounded-xl overflow-hidden group cursor-pointer"
                             >
                                 <Image
-                                    src={product.image || '/images/surface.jpg'}
-                                    alt={product.brandname || 'Surface'}
+                                    src={item.image}
+                                    alt="Surface Item"
                                     width={500}
                                     height={500}
                                     className="object-cover w-full h-full"
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
-                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <p className="text-white font-medium text-sm">{product.brandname}</p>
-                                    <p className="text-white/80 text-xs">{product.type}</p>
-                                </div>
                                 <div className="absolute top-2 right-2 bg-white/20 rounded-full p-1 group-hover:scale-105 transition">
                                     <span className="text-white text-xl">↗</span>
                                 </div>
                             </Link>
                         ))
                     ) : (
-                        ['/images/surface.jpg', '/images/surface.jpg', '/images/surface.jpg', '/images/surface.jpg']
-                            .map((src, idx) => (
-                                <div key={idx} className="relative bg-white/5 rounded-xl overflow-hidden group">
-                                    <Image
-                                        src={src}
-                                        alt={`Surface ${idx + 1}`}
-                                        width={500}
-                                        height={500}
-                                        className="object-cover w-full h-full"
-                                    />
-                                    <div className="absolute top-2 right-2 bg-white/20 rounded-full p-1 group-hover:scale-105 transition">
-                                        <span className="text-white text-xl">↗</span>
-                                    </div>
-                                </div>
-                            ))
+                        <p>No Surface Items Found.</p>
                     )}
                 </div>
 
-                {/* Right side big card - Static */}
+                {/* ✅ Right Side Big Highlight Card */}
                 <div className="relative rounded-3xl overflow-hidden group h-full">
-                    <Image
-                        src="/images/surface.jpg"
-                        alt="Surface Feature"
-                        width={1000}
-                        height={1000}
-                        className="object-cover w-full h-full"
-                    />
-                    <Link href="/productsearch">
-                        <div className="absolute bottom-6 left-6 bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[220px] cursor-pointer hover:bg-white/30 transition">
-                            Surface
-                            <span className="ml-2 text-white">↗</span>
-                        </div>
-                    </Link>
+                    {bigCard ? (
+                        <>
+                            <Image
+                                src={bigCard.image}
+                                alt="Surface Feature"
+                                width={1000}
+                                height={1000}
+                                className="object-cover w-full h-full"
+                            />
+                            <Link href={bigCard.link || '#'} className="absolute bottom-6 left-6">
+                                <div className="bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[220px] cursor-pointer hover:bg-white/30 transition">
+                                    Surface <span className="ml-2 text-white">↗</span>
+                                </div>
+                            </Link>
+                        </>
+                    ) : (
+                        <div className="bg-gray-300 animate-pulse w-full h-full rounded-3xl" />
+                    )}
                 </div>
+
             </div>
         </div>
     );
