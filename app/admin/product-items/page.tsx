@@ -51,7 +51,7 @@ export default function ProductItemsPage() {
     const [uploading, setUploading] = useState(false);
     const [uploadedImagePath, setUploadedImagePath] = useState<string>('');
 
-    // ✅ เช็คจำนวนรายการ
+    // ✅ Count items
     const surfaceCount = Array.isArray(surfaceData) ? surfaceData.length : 0;
     const furnishCount = Array.isArray(furnishData) ? furnishData.length : 0;
 
@@ -61,7 +61,7 @@ export default function ProductItemsPage() {
             setUploading(true);
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('folder', activeTab); // surface หรือ furnishing
+            formData.append('folder', activeTab);
 
             const res = await axios.post('/api/admin/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -90,9 +90,9 @@ export default function ProductItemsPage() {
     const showModal = (item?: ProductItem) => {
         const currentCount = activeTab === 'surface' ? surfaceCount : furnishCount;
 
-        // ✅ ถ้าเพิ่มใหม่ และมีครบ 4 แล้ว
-        if (!item && currentCount >= 4) {
-            message.error(`Cannot add more items! Maximum 4 ${activeTab} items allowed.`);
+        // ✅ Prevent adding more than 5 items
+        if (!item && currentCount >= 5) {
+            message.error(`Cannot add more items! Maximum 5 ${activeTab} items allowed.`);
             return;
         }
 
@@ -118,11 +118,6 @@ export default function ProductItemsPage() {
                 return;
             }
 
-            if (!values.link) {
-                message.error('Please input product link!');
-                return;
-            }
-
             const payload = {
                 image: uploadedImagePath,
                 link: values.link,
@@ -133,24 +128,17 @@ export default function ProductItemsPage() {
                 : '/api/admin/productfurnish';
 
             if (editingItem) {
-                // Update
                 await axios.put(endpoint, {
                     item_id: editingItem.item_id,
                     ...payload,
                 });
                 message.success('Item updated successfully!');
             } else {
-                // Add new
                 await axios.post(endpoint, payload);
                 message.success('Item created successfully!');
             }
 
-            // Refresh data
-            if (activeTab === 'surface') {
-                mutateSurface();
-            } else {
-                mutateFurnish();
-            }
+            activeTab === 'surface' ? mutateSurface() : mutateFurnish();
 
             setIsModalOpen(false);
             setUploadedImagePath('');
@@ -166,9 +154,9 @@ export default function ProductItemsPage() {
         try {
             const currentCount = activeTab === 'surface' ? surfaceCount : furnishCount;
 
-            // ✅ ห้ามลบถ้าเหลือ 4 รายการ
-            if (currentCount <= 4) {
-                message.error(`Cannot delete! Minimum 4 ${activeTab} items required.`);
+            // ✅ Prevent deleting if only 5 items left
+            if (currentCount <= 5) {
+                message.error(`Cannot delete! Minimum 5 ${activeTab} items required.`);
                 return;
             }
 
@@ -179,11 +167,7 @@ export default function ProductItemsPage() {
             await axios.delete(endpoint, { data: { item_id } });
             message.success('Item deleted successfully!');
 
-            if (activeTab === 'surface') {
-                mutateSurface();
-            } else {
-                mutateFurnish();
-            }
+            activeTab === 'surface' ? mutateSurface() : mutateFurnish();
         } catch (err) {
             console.error('Delete error:', err);
             message.error('Delete failed!');
@@ -192,12 +176,7 @@ export default function ProductItemsPage() {
 
     // ✅ Table columns
     const columns = [
-        {
-            title: 'ID',
-            dataIndex: 'item_id',
-            key: 'item_id',
-            width: 80,
-        },
+        { title: 'ID', dataIndex: 'item_id', key: 'item_id', width: 80 },
         {
             title: 'Image',
             dataIndex: 'image',
@@ -220,9 +199,7 @@ export default function ProductItemsPage() {
             dataIndex: 'link',
             key: 'link',
             render: (url: string) => (
-                <a href={url} target="_blank" rel="noopener noreferrer">
-                    {url}
-                </a>
+                <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
             ),
         },
         {
@@ -231,12 +208,7 @@ export default function ProductItemsPage() {
             width: 150,
             render: (_: any, record: ProductItem) => (
                 <Space>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => showModal(record)}
-                    />
+                    <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => showModal(record)} />
                     <Popconfirm
                         title="Delete this item?"
                         onConfirm={() => handleDelete(record.item_id)}
@@ -250,21 +222,19 @@ export default function ProductItemsPage() {
         },
     ];
 
-    // ✅ Render Surface Tab
+    // ✅ Surface Tab
     const renderSurfaceTab = () => {
-        const canAdd = surfaceCount < 4;
-
+        const canAdd = surfaceCount < 5;
         return (
             <div>
-                {/* Status Alert */}
                 <Alert
-                    message={`Surface Items: ${surfaceCount} / 4`}
+                    message={`Surface Items: ${surfaceCount} / 5`}
                     description={
-                        surfaceCount < 4
-                            ? `You need to add ${4 - surfaceCount} more item(s)`
-                            : 'Maximum items reached (4/4)'
+                        surfaceCount < 5
+                            ? `You need to add ${5 - surfaceCount} more item(s)`
+                            : 'Maximum items reached (5/5)'
                     }
-                    type={surfaceCount === 4 ? 'success' : 'warning'}
+                    type={surfaceCount === 5 ? 'success' : 'warning'}
                     showIcon
                     style={{ marginBottom: 16 }}
                 />
@@ -276,35 +246,27 @@ export default function ProductItemsPage() {
                     style={{ marginBottom: 16 }}
                     disabled={!canAdd}
                 >
-                    Add Surface Product {!canAdd && '(Max 4)'}
+                    Add Surface Product {!canAdd && '(Max 5)'}
                 </Button>
 
-                <Table
-                    columns={columns}
-                    dataSource={Array.isArray(surfaceData) ? surfaceData : []}
-                    rowKey="item_id"
-                    pagination={false}
-                    loading={!surfaceData && !surfaceError}
-                />
+                <Table columns={columns} dataSource={surfaceData || []} rowKey="item_id" pagination={false} />
             </div>
         );
     };
 
-    // ✅ Render Furnishing Tab
+    // ✅ Furnish Tab
     const renderFurnishingTab = () => {
-        const canAdd = furnishCount < 4;
-
+        const canAdd = furnishCount < 5;
         return (
             <div>
-                {/* Status Alert */}
                 <Alert
-                    message={`Furnishing Items: ${furnishCount} / 4`}
+                    message={`Furnishing Items: ${furnishCount} / 5`}
                     description={
-                        furnishCount < 4
-                            ? `You need to add ${4 - furnishCount} more item(s)`
-                            : 'Maximum items reached (4/4)'
+                        furnishCount < 5
+                            ? `You need to add ${5 - furnishCount} more item(s)`
+                            : 'Maximum items reached (5/5)'
                     }
-                    type={furnishCount === 4 ? 'success' : 'warning'}
+                    type={furnishCount === 5 ? 'success' : 'warning'}
                     showIcon
                     style={{ marginBottom: 16 }}
                 />
@@ -316,16 +278,10 @@ export default function ProductItemsPage() {
                     style={{ marginBottom: 16 }}
                     disabled={!canAdd}
                 >
-                    Add Furnishing Product {!canAdd && '(Max 4)'}
+                    Add Furnishing Product {!canAdd && '(Max 5)'}
                 </Button>
 
-                <Table
-                    columns={columns}
-                    dataSource={Array.isArray(furnishData) ? furnishData : []}
-                    rowKey="item_id"
-                    pagination={false}
-                    loading={!furnishData && !furnishError}
-                />
+                <Table columns={columns} dataSource={furnishData || []} rowKey="item_id" pagination={false} />
             </div>
         );
     };
@@ -334,27 +290,18 @@ export default function ProductItemsPage() {
         <div>
             <Title level={2}>Product Items Management</Title>
             <p style={{ color: '#666', marginBottom: 24 }}>
-                Each category must have exactly 4 items. Minimum 4, Maximum 4.
+                Each category must have exactly 5 items. Minimum 5, Maximum 5.
             </p>
 
             <Tabs
                 activeKey={activeTab}
                 onChange={(key) => setActiveTab(key as 'surface' | 'furnishing')}
                 items={[
-                    {
-                        key: 'surface',
-                        label: `Surface (${surfaceCount}/4)`,
-                        children: renderSurfaceTab(),
-                    },
-                    {
-                        key: 'furnishing',
-                        label: `Furnishing (${furnishCount}/4)`,
-                        children: renderFurnishingTab(),
-                    },
+                    { key: 'surface', label: `Surface (${surfaceCount}/5)`, children: renderSurfaceTab() },
+                    { key: 'furnishing', label: `Furnishing (${furnishCount}/5)`, children: renderFurnishingTab() },
                 ]}
             />
 
-            {/* Modal for Add/Edit */}
             <Modal
                 title={editingItem ? `Edit ${activeTab} Product` : `Add ${activeTab} Product`}
                 open={isModalOpen}
@@ -367,21 +314,15 @@ export default function ProductItemsPage() {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="Upload Image"
-                        required
-                    >
+                    <Form.Item label="Upload Image" required>
                         <Upload
                             name="file"
                             showUploadList={false}
                             accept="image/*"
                             customRequest={async ({ file, onSuccess, onError }) => {
                                 const success = await handleUpload(file as File);
-                                if (success) {
-                                    onSuccess && onSuccess('ok');
-                                } else {
-                                    onError && onError(new Error('Upload failed'));
-                                }
+                                if (success) onSuccess?.('ok');
+                                else onError?.(new Error('Upload failed'));
                             }}
                         >
                             <Button icon={<UploadOutlined />} loading={uploading}>
@@ -391,19 +332,12 @@ export default function ProductItemsPage() {
 
                         {uploadedImagePath && (
                             <div style={{ marginTop: 16 }}>
-                                <Image
-                                    src={uploadedImagePath}
-                                    alt="Preview"
-                                    width={200}
-                                    style={{ borderRadius: 6 }}
-                                />
+                                <Image src={uploadedImagePath} alt="Preview" width={200} style={{ borderRadius: 6 }} />
                             </div>
                         )}
                     </Form.Item>
 
-                    <Form.Item name="image" hidden>
-                        <Input />
-                    </Form.Item>
+                    <Form.Item name="image" hidden><Input /></Form.Item>
 
                     <Form.Item
                         label="Product Link"
