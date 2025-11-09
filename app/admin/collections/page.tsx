@@ -59,9 +59,11 @@ export default function CollectionsPage() {
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
+
     const res = await axios.post('/api/admin/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+
     setUploading(false);
     const filePath = res.data.filePath;
     form.setFieldValue('image', filePath);
@@ -140,6 +142,7 @@ export default function CollectionsPage() {
 
       <Modal open={isModalOpen} onOk={handleOk} onCancel={() => setIsModalOpen(false)} width={600}>
         <Form form={form} layout="vertical">
+
           <Form.Item label="Collection Name" name="collection_name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -171,13 +174,27 @@ export default function CollectionsPage() {
             <TextArea rows={3} />
           </Form.Item>
 
+          {/* ✅ Fixed: Upload + Preview */}
           <Form.Item label="Image" name="image" rules={[{ required: true }]}>
-            <Upload showUploadList={false} customRequest={async ({ file, onSuccess }) => {
-              await handleUpload(file as File);
-              onSuccess && onSuccess("ok");
-            }}>
+            <Upload
+              showUploadList={false}
+              customRequest={async ({ file, onSuccess }) => {
+                const path = await handleUpload(file as File);
+                form.setFieldValue('image', path);
+                onSuccess && onSuccess("ok");
+              }}
+            >
               <Button icon={<UploadOutlined />} loading={uploading}>Upload Image</Button>
             </Upload>
+
+            {form.getFieldValue('image') && (
+              <Image
+                src={form.getFieldValue('image')}
+                alt="Preview"
+                width={150}
+                style={{ marginTop: 10, borderRadius: 6 }}
+              />
+            )}
           </Form.Item>
 
           <Form.Item label="Link" name="link">
@@ -187,6 +204,7 @@ export default function CollectionsPage() {
           <Form.Item label="Relate Link" name="relate_link">
             <Input />
           </Form.Item>
+
         </Form>
       </Modal>
     </div>

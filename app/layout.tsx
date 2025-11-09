@@ -10,7 +10,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   // ✅ path ที่ต้องการซ่อน navbar แบบเจาะจง
-  const noNavbarPaths = ["/productsearch", "/projectdetail"];
+  const noNavbarPaths = ["/productsearch", "/projectdetail", "/brands"];
 
   // ✅ ซ่อน navbar เมื่อ path เป็น /admin หรือ /admin/*
   const hideNavbar =

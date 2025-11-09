@@ -30,7 +30,6 @@ const Furnishing = () => {
         }
     };
 
-    // ✅ แยก: ตัวแรก -> ภาพใหญ่ขวา / 4 ตัวแรก -> ฝั่งซ้าย
     const bigCard = furnishItems[0];
     const smallCards = furnishItems.slice(1, 5);
 
@@ -39,7 +38,7 @@ const Furnishing = () => {
             <h2 className="text-2xl font-semibold mb-6">Furnishing</h2>
             <div className="grid grid-cols-3 gap-6">
 
-                {/* ✅ Left 2x2 Grid */}
+                {/* ✅ Left 2x2 Small Cards (all link to /brands) */}
                 <div className="grid grid-cols-2 grid-rows-2 gap-6 col-span-2">
                     {loading ? (
                         Array(4).fill(0).map((_, idx) => (
@@ -49,7 +48,7 @@ const Furnishing = () => {
                         smallCards.map((item) => (
                             <Link
                                 key={item.item_id}
-                                href={item.link || '#'}
+                                href="/brands"  // ✅ Force /brands
                                 className="relative bg-white/5 rounded-xl overflow-hidden group cursor-pointer"
                             >
                                 <Image
@@ -70,7 +69,7 @@ const Furnishing = () => {
                     )}
                 </div>
 
-                {/* ✅ Right Side Big Highlight Card */}
+                {/* ✅ Right Big Card (also link to /brands) */}
                 <div className="relative rounded-3xl overflow-hidden group h-full">
                     {bigCard ? (
                         <>
@@ -81,7 +80,8 @@ const Furnishing = () => {
                                 height={1000}
                                 className="object-cover w-full h-full"
                             />
-                            <Link href={bigCard.link || '#'} className="absolute bottom-6 left-6">
+
+                            <Link href="/brands" className="absolute bottom-6 left-6">
                                 <div className="bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[220px] cursor-pointer hover:bg-white/30 transition">
                                     Furnishing <span className="ml-2 text-white">↗</span>
                                 </div>

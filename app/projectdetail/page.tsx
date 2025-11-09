@@ -39,6 +39,15 @@ export default function ProjectDetail() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    const handleCollectionClick = (c: Collection) => {
+        if (!c.status) {
+            alert("This product is discontinued. You will be redirected to a related collection.");
+            window.open(c.relate_link, "_blank");
+        } else {
+            window.open(c.link, "_blank");
+        }
+    };
+
     useEffect(() => {
         if (!projectId) return;
 
@@ -93,7 +102,6 @@ export default function ProjectDetail() {
     return (
         <div className="bg-[#4a4a4a] min-h-screen text-white overflow-x-hidden">
 
-            {/* HEADER */}
             <header className="flex items-center justify-between px-8 py-4 bg-transparent">
                 <Link href="/projects">
                     <button className="bg-white text-black font-semibold px-6 py-2 rounded-full shadow-md hover:bg-gray-100 transition">
@@ -102,14 +110,13 @@ export default function ProjectDetail() {
                 </Link>
             </header>
 
-            {/* HERO */}
             <section className="px-12 pt-16 pb-10">
                 <h1 className="text-6xl font-extrabold mb-2">About Project</h1>
                 <h2 className="text-3xl font-semibold mb-2">{project.project_name}</h2>
                 <p className="text-gray-300">Updated : {formatDate(project.data_update)}</p>
             </section>
 
-            {/* IMAGE SLIDER */}
+            {/* SLIDER */}
             <div className="px-8 mb-12">
                 <div className="relative max-w-7xl mx-auto">
                     <div className="flex items-center justify-center gap-4">
@@ -132,7 +139,7 @@ export default function ProjectDetail() {
                 </div>
             </div>
 
-            {/* CAROUSEL with BG IMAGE */}
+            {/* CAROUSEL */}
             <div className="text-center mb-10">
                 <h3 className="text-xl mb-4">Take a look here</h3>
 
@@ -140,7 +147,8 @@ export default function ProjectDetail() {
                     {carouselItems.map(c => (
                         <div
                             key={c.collection_id}
-                            className="relative w-32 h-20 rounded-lg overflow-hidden shadow-md cursor-pointer group"
+                            onClick={() => handleCollectionClick(c)}
+                            className="relative w-32 h-20 rounded-lg overflow-hidden shadow-md cursor-pointer group hover:scale-105 transition"
                             style={{
                                 backgroundImage: `url(${c.image})`,
                                 backgroundSize: "cover",
@@ -164,7 +172,7 @@ export default function ProjectDetail() {
                 )}
             </div>
 
-            {/* PRODUCT OVERVIEW */}
+            {/* TABLE */}
             <div className="bg-[#3a3a3a] rounded-2xl p-6 mx-8 mb-8 overflow-hidden">
 
                 <div className="flex justify-between items-center mb-6">
@@ -207,7 +215,11 @@ export default function ProjectDetail() {
 
                     <tbody>
                         {filteredCollections.map(c => (
-                            <tr key={c.collection_id} className="border-b border-gray-700 hover:bg-gray-700">
+                            <tr
+                                key={c.collection_id}
+                                onClick={() => handleCollectionClick(c)}
+                                className="border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition"
+                            >
                                 <td className="px-4 py-2">{c.collection_name}</td>
                                 <td className="px-4 py-2">{c.type}</td>
                                 <td className="px-4 py-2">{c.brand_name}</td>
