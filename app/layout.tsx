@@ -8,24 +8,30 @@ import type { ReactNode } from "react";
 
 const Layout = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
-  const noNavbarPaths = ["/productsearch", "/admin", "/projectdetail"];
-  const hideNavbar = noNavbarPaths.includes(pathname);
+
+  // ✅ path ที่ต้องการซ่อน navbar แบบเจาะจง
+  const noNavbarPaths = ["/productsearch", "/projectdetail"];
+
+  // ✅ ซ่อน navbar เมื่อ path เป็น /admin หรือ /admin/*
+  const hideNavbar =
+    noNavbarPaths.includes(pathname) || pathname.startsWith("/admin");
 
   return (
     <html>
       <body className="bg-white relative">
-        {/* ✅ Navbar ซ้อน page ได้ แต่ไม่เลื่อนตาม */}
+        {/* ✅ แสดงเฉพาะหน้าที่ไม่ซ่อน */}
         {!hideNavbar && (
           <div className="absolute top-0 left-0 w-full z-50 bg-transparent">
             <Navbar />
           </div>
         )}
 
-        {/* ✅ ให้เนื้อหาข้างล่างไม่โดนทับ ถ้ามีภาพพื้นหลังจะเห็น Navbar ซ้อนอยู่ */}
+        {/* ✅ เนื้อหาหลัก */}
         <main className="w-full">
           {children}
         </main>
 
+        {/* ✅ Footer ยังแสดงทุกหน้า */}
         <Footer />
       </body>
     </html>
