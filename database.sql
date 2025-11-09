@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS home_sliders (
     INDEX idx_display_order (display_order)
 );
 
--- 2. ตาราง brands (✅ เพิ่ม brand_url)
+-- 2. ตาราง brands
 CREATE TABLE IF NOT EXISTS brands (
     brand_id INT PRIMARY KEY AUTO_INCREMENT,
     brand_name VARCHAR(100) NOT NULL,
@@ -67,10 +67,11 @@ CREATE TABLE IF NOT EXISTS project_images (
     INDEX idx_project_id (project_id)
 );
 
--- 7. ตาราง collections
+-- 7. ตาราง collections (✅ เพิ่ม collection_name)
 CREATE TABLE IF NOT EXISTS collections (
     collection_id INT PRIMARY KEY AUTO_INCREMENT,
-    type VARCHAR(100) NOT NULL,
+    collection_name VARCHAR(100) NOT NULL,     -- ✅ ชื่อคอลเลคชัน
+    type VARCHAR(100) NOT NULL,                -- ชนิดวัสดุ / series name
     brand_id INT,
     material_type ENUM('Surface', 'Furniture') NOT NULL,
     status BOOLEAN DEFAULT TRUE,
@@ -81,7 +82,7 @@ CREATE TABLE IF NOT EXISTS collections (
     FOREIGN KEY (brand_id) REFERENCES brands(brand_id)
 );
 
--- 8. ตาราง project_collections (Many-to-Many)
+-- 8. ตาราง project_collections
 CREATE TABLE IF NOT EXISTS project_collections (
     id INT PRIMARY KEY AUTO_INCREMENT,
     project_id INT NOT NULL,
@@ -123,10 +124,10 @@ CREATE TABLE IF NOT EXISTS product_furnish_items (
 );
 
 -- ===================================
--- 🧩 MOCKUP DATA INSERTS
+-- 🧩 MOCKUP DATA INSERTS (UPDATED)
 -- ===================================
 
--- 🔹 Brands (✅ เพิ่ม brand_url)
+-- 🔹 Brands
 INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url) VALUES
 ('Potocco', '/uploads/brands/potocco.png', 'Furnishing', 'Wood', 'https://www.potocco.com'),
 ('Amo Surface', '/uploads/brands/amo_surface_logo.png', 'Surface', 'Ceramic', 'https://amo.co.th'),
@@ -134,79 +135,11 @@ INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url) VALUES
 ('Cattelan Italia', '/uploads/brands/cattelan_italia.png', 'Furnishing', 'Metal', 'https://www.cattelanitalia.com'),
 ('Amo Surface Premium', '/uploads/brands/amo_surface_premium.png', 'Surface', 'Porcelain', 'https://amo.co.th');
 
--- 🔹 Home Sliders
-INSERT INTO home_sliders (image_url, display_order) VALUES
-('/uploads/home/slider1.jpg', 1),
-('/uploads/home/slider2.jpg', 2),
-('/uploads/home/slider3.jpg', 3);
+-- 🔹 Collections (✅ Updated to include collection_name)
+INSERT INTO collections (collection_name, type, brand_id, material_type, status, description, image, link, relate_link) VALUES
+('Marble White', 'Marble White', 2, 'Surface', TRUE, 'Italian marble surface with glossy finish', '/uploads/products/marble_white.jpg', 'https://example.com/products/marble_white', 'https://example.com/related/marble_series'),
+('Oak Natural', 'Oak Natural', 3, 'Furniture', FALSE, 'Wood-inspired surface', '/uploads/products/oak_natural.jpg', 'https://example.com/products/oak_natural', 'https://example.com/related/wood_collection'),
+('Onyx Grey', 'Onyx Grey', 5, 'Surface', TRUE, 'Luxurious porcelain surface with matte texture', '/uploads/products/onyx_grey.jpg', 'https://example.com/products/onyx_grey', 'https://example.com/related/onyx'),
+('Walnut Deep', 'Walnut Deep', 3, 'Furniture', TRUE, 'Elegant deep walnut wood finish', '/uploads/products/walnut_deep.jpg', 'https://example.com/products/walnut_deep', 'https://example.com/related/walnut'),
+('Travertine Classic', 'Travertine Classic', 2, 'Surface', TRUE, 'Natural travertine look surface', '/uploads/products/travertine_classic.jpg', 'https://example.com/products/travertine_classic', 'https://example.com/related/travertine');
 
--- 🔹 Projects
-INSERT INTO projects (project_name, data_update, project_category) VALUES
-('Lifestyle Space', '2025-10-30', 'Residential'),
-('Amo Pavilion 2025', '2025-10-25', 'Commercial'),
-('Modern Loft Project', '2025-10-10', 'Residential'),
-('Gallery Design Center', '2025-09-15', 'Commercial');
-
--- 🔹 Project Images
-INSERT INTO project_images (project_id, image_url, display_order) VALUES
-(1, '/uploads/projects/lifestyle_space_1.jpg', 1),
-(1, '/uploads/projects/lifestyle_space_2.jpg', 2),
-(2, '/uploads/projects/pavilion_1.jpg', 1),
-(2, '/uploads/projects/pavilion_2.jpg', 2),
-(3, '/uploads/projects/modern_loft_1.jpg', 1),
-(4, '/uploads/projects/gallery_1.jpg', 1);
-
--- 🔹 Collections
-INSERT INTO collections (type, brand_id, material_type, status, description, image, link, relate_link) VALUES
-('Marble White', 2, 'Surface', TRUE, 'Italian marble surface with glossy finish', '/uploads/products/marble_white.jpg', 'https://example.com/products/marble_white', 'https://example.com/related/marble_series'),
-('Oak Natural', 3, 'Furniture', FALSE, 'Wood-inspired surface', '/uploads/products/oak_natural.jpg', 'https://example.com/products/oak_natural', 'https://example.com/related/wood_collection'),
-('Onyx Grey', 5, 'Surface', TRUE, 'Luxurious porcelain surface with matte texture', '/uploads/products/onyx_grey.jpg', 'https://example.com/products/onyx_grey', 'https://example.com/related/onyx'),
-('Walnut Deep', 3, 'Furniture', TRUE, 'Elegant deep walnut wood finish', '/uploads/products/walnut_deep.jpg', 'https://example.com/products/walnut_deep', 'https://example.com/related/walnut'),
-('Travertine Classic', 2, 'Surface', TRUE, 'Natural travertine look surface', '/uploads/products/travertine_classic.jpg', 'https://example.com/products/travertine_classic', 'https://example.com/related/travertine');
-
--- 🔹 Project ↔ Collections
-INSERT INTO project_collections (project_id, collection_id) VALUES
-(1, 1), (1, 2), (2, 3), (2, 5), (3, 4), (4, 1);
-
--- 🔹 Product Focus
-INSERT INTO product_focus (collection_name, brand_id, description, made_in, type, link) VALUES
-('Jade', 1, 'Premium Italian furnishing design blending modern and tradition', 'Italy', 'Furnishing', 'https://www.potocco.com/jade'),
-('Onyx Grey Collection', 5, 'Porcelain surface for luxurious interiors', 'Italy', 'Surface', 'https://example.com/products/onyx_grey');
-
--- 🔹 Product Focus Images
-INSERT INTO product_focus_images (focus_id, image_url, display_order) VALUES
-(1, '/uploads/focus/jade_1.jpg', 1),
-(1, '/uploads/focus/jade_2.jpg', 2),
-(1, '/uploads/focus/jade_3.jpg', 3),
-(2, '/uploads/focus/onyx_1.jpg', 1),
-(2, '/uploads/focus/onyx_2.jpg', 2);
-
--- 🔹 Product Main
-INSERT INTO product_main (collection_name, brand_id, link) VALUES
-('Marble Series', 2, 'https://example.com/marble_series'),
-('Wood Living Set', 3, 'https://example.com/wood_living');
-
--- 🔹 Product Main Images
-INSERT INTO product_main_images (product_main_id, image_url) VALUES
-(1, '/uploads/main/marble_1.jpg'),
-(1, '/uploads/main/marble_2.jpg'),
-(2, '/uploads/main/wood_1.jpg'),
-(2, '/uploads/main/wood_2.jpg');
-
--- 🔹 Product Surface Items
-INSERT INTO product_surface_items (image, link) VALUES
-('/uploads/surface/surface1.jpg', 'https://example.com/surface/1'),
-('/uploads/surface/surface2.jpg', 'https://example.com/surface/2'),
-('/uploads/surface/surface3.jpg', 'https://example.com/surface/3'),
-('/uploads/surface/surface4.jpg', 'https://example.com/surface/4');
-
--- 🔹 Product Furnish Items
-INSERT INTO product_furnish_items (image, link) VALUES
-('/uploads/furnish/furnish1.jpg', 'https://example.com/furnish/1'),
-('/uploads/furnish/furnish2.jpg', 'https://example.com/furnish/2'),
-('/uploads/furnish/furnish3.jpg', 'https://example.com/furnish/3'),
-('/uploads/furnish/furnish4.jpg', 'https://example.com/furnish/4');
-
--- ===================================
--- ✅ MOCKUP DATA READY
--- ===================================

@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 interface Collection {
     collection_id: number;
+    collection_name: string;
     type: string;
     brand_name: string;
     material_type: string;
@@ -86,7 +87,6 @@ export default function ProjectDetail() {
     const totalCarouselPages = Math.ceil(project.collections.length / 4);
     const carouselItems = project.collections.slice(carouselIndex * 4, carouselIndex * 4 + 4);
 
-    // ฟังก์ชันสำหรับหา index ของรูปก่อนหน้าและถัดไป
     const getPrevIndex = () => (current - 1 + project.project_images.length) % project.project_images.length;
     const getNextIndex = () => (current + 1) % project.project_images.length;
 
@@ -109,86 +109,48 @@ export default function ProjectDetail() {
                 <p className="text-gray-300">Updated : {formatDate(project.data_update)}</p>
             </section>
 
-            {/* IMAGE SLIDER - แบบใหม่ที่แสดงรูปข้างๆ */}
+            {/* IMAGE SLIDER */}
             <div className="px-8 mb-12">
                 <div className="relative max-w-7xl mx-auto">
                     <div className="flex items-center justify-center gap-4">
 
-                        {/* รูปก่อนหน้า */}
-                        <div
-                            className="w-1/4 h-64 rounded-lg overflow-hidden opacity-50 cursor-pointer transition-all hover:opacity-70"
-                            onClick={prevSlide}
-                        >
-                            <img
-                                src={project.project_images[getPrevIndex()]}
-                                alt="Previous"
-                                className="w-full h-full object-cover"
-                            />
+                        <div className="w-1/4 h-64 rounded-lg overflow-hidden opacity-50 cursor-pointer transition-all hover:opacity-70" onClick={prevSlide}>
+                            <img src={project.project_images[getPrevIndex()]} className="w-full h-full object-cover" />
                         </div>
 
-                        {/* รูปหลัก */}
                         <div className="relative w-2/4 h-96 rounded-2xl overflow-hidden shadow-2xl group">
                             {project.project_images.map((img, i) => (
-                                <img
-                                    key={i}
-                                    src={img}
-                                    alt={`Slide ${i + 1}`}
-                                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${i === current ? 'opacity-100' : 'opacity-0'
-                                        }`}
-                                />
+                                <img key={i} src={img} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0'}`} />
                             ))}
-
-                            {/* ปุ่มซ้าย-ขวา */}
-                            <button
-                                onClick={prevSlide}
-                                className="absolute top-1/2 left-4 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 backdrop-blur-sm transition text-2xl"
-                            >
-                                ‹
-                            </button>
-
-                            <button
-                                onClick={nextSlide}
-                                className="absolute top-1/2 right-4 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 backdrop-blur-sm transition text-2xl"
-                            >
-                                ›
-                            </button>
-
-                            {/* Dots indicator */}
-                            <div className="absolute bottom-4 w-full flex justify-center gap-2">
-                                {project.project_images.map((_, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setCurrent(i)}
-                                        className={`w-3 h-3 rounded-full transition ${i === current ? 'bg-orange-500' : 'bg-white/60'
-                                            }`}
-                                    />
-                                ))}
-                            </div>
                         </div>
 
-                        {/* รูปถัดไป */}
-                        <div
-                            className="w-1/4 h-64 rounded-lg overflow-hidden opacity-50 cursor-pointer transition-all hover:opacity-70"
-                            onClick={nextSlide}
-                        >
-                            <img
-                                src={project.project_images[getNextIndex()]}
-                                alt="Next"
-                                className="w-full h-full object-cover"
-                            />
+                        <div className="w-1/4 h-64 rounded-lg overflow-hidden opacity-50 cursor-pointer transition-all hover:opacity-70" onClick={nextSlide}>
+                            <img src={project.project_images[getNextIndex()]} className="w-full h-full object-cover" />
                         </div>
 
                     </div>
                 </div>
             </div>
 
-            {/* CAROUSEL */}
+            {/* CAROUSEL with BG IMAGE */}
             <div className="text-center mb-10">
                 <h3 className="text-xl mb-4">Take a look here</h3>
+
                 <div className="flex justify-center gap-4 mb-4">
                     {carouselItems.map(c => (
-                        <div key={c.collection_id} className="block w-32 h-20 rounded-lg bg-gray-600 flex items-center justify-center text-white text-xs font-bold">
-                            {c.type}
+                        <div
+                            key={c.collection_id}
+                            className="relative w-32 h-20 rounded-lg overflow-hidden shadow-md cursor-pointer group"
+                            style={{
+                                backgroundImage: `url(${c.image})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center"
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition"></div>
+                            <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold px-2 text-center">
+                                {c.collection_name}
+                            </span>
                         </div>
                     ))}
                 </div>
@@ -212,27 +174,17 @@ export default function ProjectDetail() {
                     </h2>
 
                     <div className="relative">
-                        <button
-                            onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="px-4 py-2 border border-orange-500 text-orange-500 rounded-full hover:bg-orange-500 hover:text-white transition"
-                        >
+                        <button onClick={() => setDropdownOpen(!dropdownOpen)} className="px-4 py-2 border border-orange-500 text-orange-500 rounded-full hover:bg-orange-500 hover:text-white transition">
                             {selectedType || "Select Type"}
                         </button>
 
                         {dropdownOpen && (
                             <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-lg z-10">
-                                <button
-                                    className="block w-full px-4 py-2 hover:bg-orange-100"
-                                    onClick={() => { setSelectedType(null); setDropdownOpen(false); }}
-                                >
+                                <button className="block w-full px-4 py-2 hover:bg-orange-100" onClick={() => { setSelectedType(null); setDropdownOpen(false); }}>
                                     All Type
                                 </button>
                                 {uniqueTypes.map(t => (
-                                    <button
-                                        key={t}
-                                        className="block w-full px-4 py-2 hover:bg-orange-100"
-                                        onClick={() => { setSelectedType(t); setDropdownOpen(false); }}
-                                    >
+                                    <button key={t} className="block w-full px-4 py-2 hover:bg-orange-100" onClick={() => { setSelectedType(t); setDropdownOpen(false); }}>
                                         {t}
                                     </button>
                                 ))}
@@ -244,6 +196,7 @@ export default function ProjectDetail() {
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="border-b border-gray-600">
+                            <th className="px-4 py-2">Collection Name</th>
                             <th className="px-4 py-2">Type</th>
                             <th className="px-4 py-2">Brand</th>
                             <th className="px-4 py-2">Material</th>
@@ -255,6 +208,7 @@ export default function ProjectDetail() {
                     <tbody>
                         {filteredCollections.map(c => (
                             <tr key={c.collection_id} className="border-b border-gray-700 hover:bg-gray-700">
+                                <td className="px-4 py-2">{c.collection_name}</td>
                                 <td className="px-4 py-2">{c.type}</td>
                                 <td className="px-4 py-2">{c.brand_name}</td>
                                 <td className="px-4 py-2">{c.material_type}</td>

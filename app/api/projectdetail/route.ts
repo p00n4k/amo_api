@@ -39,10 +39,11 @@ export async function GET(req: Request) {
       ORDER BY display_order ASC
     `);
 
-    // 🔹 3. Fetch collections with brand info
+    // 🔹 3. Fetch collections with brand info (✅ เพิ่ม c.collection_name)
     const [collectionRows] = await connection.query(`
       SELECT 
         c.collection_id,
+        c.collection_name,     -- ✅ NEW
         c.type,
         b.brand_name,
         c.material_type,
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
 
     await connection.end();
 
-    // 🔹 4. Build final JSON structure
+    // 🔹 4. Build final JSON structure (✅ ส่ง collection_name ออกไปด้วย)
     const result = [
       {
         project_id: project.project_id,
@@ -70,6 +71,7 @@ export async function GET(req: Request) {
         project_images: imageRows.map((i: any) => i.image_url),
         collections: collectionRows.map((c: any) => ({
           collection_id: c.collection_id,
+          collection_name: c.collection_name, // ✅ NEW
           type: c.type,
           brand_name: c.brand_name,
           material_type: c.material_type,

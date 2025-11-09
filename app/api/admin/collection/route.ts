@@ -10,7 +10,9 @@ export async function GET() {
     const [rows] = await connection.query(`
       SELECT 
         c.collection_id,
+        c.collection_name,
         c.type,
+        c.brand_id,
         b.brand_name,
         c.material_type,
         c.status,
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
+      collection_name,
       type,
       brand_id,
       material_type,
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
       relate_link,
     } = body;
 
-    if (!type || !brand_id || !material_type) {
+    if (!collection_name || !type || !brand_id || !material_type) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -57,10 +60,10 @@ export async function POST(req: Request) {
     await connection.query(
       `
       INSERT INTO collections
-      (type, brand_id, material_type, status, description, image, link, relate_link)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (collection_name, type, brand_id, material_type, status, description, image, link, relate_link)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-      [type, brand_id, material_type, status ?? true, description, image, link, relate_link]
+      [collection_name, type, brand_id, material_type, status ?? true, description, image, link, relate_link]
     );
 
     return NextResponse.json({ success: true, message: "Collection created successfully" });
@@ -78,6 +81,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const {
       collection_id,
+      collection_name,
       type,
       brand_id,
       material_type,
@@ -96,10 +100,10 @@ export async function PUT(req: Request) {
     await connection.query(
       `
       UPDATE collections
-      SET type=?, brand_id=?, material_type=?, status=?, description=?, image=?, link=?, relate_link=?
+      SET collection_name=?, type=?, brand_id=?, material_type=?, status=?, description=?, image=?, link=?, relate_link=?
       WHERE collection_id=?
     `,
-      [type, brand_id, material_type, status, description, image, link, relate_link, collection_id]
+      [collection_name, type, brand_id, material_type, status, description, image, link, relate_link, collection_id]
     );
 
     return NextResponse.json({ success: true, message: "Collection updated successfully" });
