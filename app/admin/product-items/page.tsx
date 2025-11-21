@@ -348,6 +348,16 @@ export default function ProductItemsPage() {
                     </Form.Item>
                 </Form>
             </Modal>
+            <Image
+                src="/static/product.png"
+                alt="Homepage Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }

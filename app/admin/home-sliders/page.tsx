@@ -244,7 +244,18 @@ export default function HomeSlidersPage() {
                         <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
                 </Form>
+
             </Modal>
+            <Image
+                src="/static/homepage.png"
+                alt="Homepage Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }

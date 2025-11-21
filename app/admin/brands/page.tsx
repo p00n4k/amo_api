@@ -280,6 +280,16 @@ export default function BrandsPage() {
                     </Form.Item>
                 </Form>
             </Modal>
+            <Image
+                src="\static\brandspreview.png"
+                alt="Homepage Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }

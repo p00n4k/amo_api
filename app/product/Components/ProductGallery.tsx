@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Surface from './Surface'
 import Furnishing from './Furnishing'
 
+
 const ProductGallery = () => {
     const [selectedTab, setSelectedTab] = useState<'surface' | 'furnishing'>('surface')
 

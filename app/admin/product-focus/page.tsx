@@ -446,6 +446,16 @@ export default function ProductFocusPage() {
                     />
                 </div>
             </Modal>
+            <Image
+                src="/static/productfocus.png"
+                alt="Homepage Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }

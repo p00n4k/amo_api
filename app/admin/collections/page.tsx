@@ -207,6 +207,16 @@ export default function CollectionsPage() {
 
         </Form>
       </Modal>
+      <Image
+        src="/static/collectionpreview.png"
+        alt="Collection Preview"
+        width={900}
+        style={{
+          marginTop: 40,
+          borderRadius: 8,
+          display: "block",
+        }}
+      />
     </div>
   );
 }

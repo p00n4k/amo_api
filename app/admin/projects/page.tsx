@@ -486,6 +486,26 @@ export default function ProjectsPage() {
                     </div>
                 </div>
             </Modal>
+            <Image
+                src="/static/project.png"
+                alt="Project Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
+            <Image
+                src="/static/projectall.png"
+                alt="Project All Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }

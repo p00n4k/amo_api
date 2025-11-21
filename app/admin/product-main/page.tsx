@@ -402,6 +402,16 @@ export default function ProductMainPage() {
                     />
                 </div>
             </Modal>
+            <Image
+                src="/static/productmain.png"
+                alt="Product Main Preview"
+                width={900}
+                style={{
+                    marginTop: 40,
+                    borderRadius: 8,
+                    display: "block",
+                }}
+            />
         </div>
     );
 }
