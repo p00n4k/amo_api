@@ -1,40 +1,81 @@
 "use client";
 
-import React from "react";
-import Link from "next/link"; // ✅ Import Link from next/link
-import "./Navbar.css"; // Use relative import if in same folder
+import React, { useState } from "react";
+import Link from "next/link";
+import "./Navbar.css";
 
 const Navbar = () => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const toggleMenu = () => {
+        setIsMenuOpen(!isMenuOpen);
+    };
+
+    const closeMenu = () => {
+        setIsMenuOpen(false);
+    };
+
     return (
-        <div className="navbar-container">
-            <nav className="navbar">
-                <div className="navbar-content">
-                    {/* Left navigation */}
-                    <div className="navbar-left">
-                        <Link href="/home" className="nav-link">Home</Link>
-                        <Link href="/product" className="nav-link">Product</Link>
-                        <Link href="/projects" className="nav-link">Project</Link>
-                    </div>
+        <>
+            <div className="navbar-container">
+                <nav className="navbar">
+                    <div className="navbar-content">
+                        {/* Left navigation - Desktop only */}
+                        <div className="navbar-left">
+                            <Link href="/home" className="nav-link">Home</Link>
+                            <Link href="/product" className="nav-link">Product</Link>
+                            <Link href="/projects" className="nav-link">Project</Link>
+                        </div>
 
-                    {/* Middle Logo */}
-                    <div className="navbar-logo">
-                        <div className="logo-text">Amo</div>
-                    </div>
+                        {/* Middle Logo */}
+                        <div className="navbar-logo">
+                            <Link href="/">
+                                <div className="logo-text">Amo</div>
+                            </Link>
+                        </div>
 
-                    {/* Right navigation */}
-                    <div className="navbar-right">
-                        {/* Line Icon with hover effect */}
-                        <Link href="/" className="icon-link group">
-                            <img src="/static/line.png" alt="Line Logo" className="icon" />
-                            <span className="hidden_line">amocorner</span>
-                        </Link>
+                        {/* Right navigation - Desktop only */}
+                        <div className="navbar-right">
+                            {/* Line Icon with hover effect */}
+                            <Link href="/" className="icon-link group">
+                                <img src="/static/line.png" alt="Line Logo" className="icon" />
+                                <span className="hidden_line">amocorner</span>
+                            </Link>
 
-                        {/* Get in Touch Button */}
-                        <Link href="/about" className="cta-button">Get in touch</Link>
+                            {/* Get in Touch Button */}
+                            <Link href="/about" className="cta-button">Get in touch</Link>
+                        </div>
+
+                        {/* Hamburger Button - Mobile only */}
+                        <button
+                            className={`hamburger-button ${isMenuOpen ? "hamburger-open" : ""}`}
+                            onClick={toggleMenu}
+                            aria-label="Toggle menu"
+                        >
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                        </button>
                     </div>
-                </div>
-            </nav>
-        </div>
+                </nav>
+            </div>
+
+            {/* Mobile Menu */}
+            <div className={`mobile-menu ${isMenuOpen ? "open" : ""}`}>
+                <Link href="/home" className="nav-link" onClick={closeMenu}>Home</Link>
+                <Link href="/product" className="nav-link" onClick={closeMenu}>Product</Link>
+                <Link href="/projects" className="nav-link" onClick={closeMenu}>Project</Link>
+
+                {/* Line Icon */}
+                <Link href="/" className="icon-link" onClick={closeMenu}>
+                    <img src="/static/line.png" alt="Line Logo" className="icon" />
+                    <span className="hidden_line">amocorner</span>
+                </Link>
+
+                {/* Get in Touch Button */}
+                <Link href="/about" className="cta-button" onClick={closeMenu}>Get in touch</Link>
+            </div>
+        </>
     );
 };
 
