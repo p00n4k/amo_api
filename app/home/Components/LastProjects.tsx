@@ -96,7 +96,7 @@ export default function LastProjects() {
                                     {/* Project Image */}
                                     <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-auto">
                                         <img
-                                            src={`http://localhost:3000${project.cover_image || "/uploads/default.jpg"}`}
+                                            src={project.cover_image || "/uploads/default.jpg"}
                                             alt={project.project_name}
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         />

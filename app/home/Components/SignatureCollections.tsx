@@ -24,7 +24,7 @@ export default function SignatureCollections() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch(`http://localhost:3000/api/productfocus/${activeType}`);
+                const res = await fetch(`/api/productfocus/${activeType}`);
                 const json = await res.json();
                 setData(json);
                 setActiveIndex(0);
@@ -62,8 +62,8 @@ export default function SignatureCollections() {
                         <button
                             onClick={() => setActiveType("surface")}
                             className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "surface"
-                                    ? "bg-orange-400 text-white border-orange-400"
-                                    : "text-gray-700 border-gray-300 hover:border-orange-400"
+                                ? "bg-orange-400 text-white border-orange-400"
+                                : "text-gray-700 border-gray-300 hover:border-orange-400"
                                 }`}
                         >
                             Surface
@@ -71,8 +71,8 @@ export default function SignatureCollections() {
                         <button
                             onClick={() => setActiveType("furnishing")}
                             className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "furnishing"
-                                    ? "bg-orange-400 text-white border-orange-400"
-                                    : "text-gray-700 border-gray-300 hover:border-orange-400"
+                                ? "bg-orange-400 text-white border-orange-400"
+                                : "text-gray-700 border-gray-300 hover:border-orange-400"
                                 }`}
                         >
                             Furnishing
@@ -131,8 +131,8 @@ export default function SignatureCollections() {
                                                 scrollToIndex(i);
                                             }}
                                             className={`relative snap-center transition-all duration-700 ease-in-out cursor-pointer ${isActive
-                                                    ? "z-20 scale-100"
-                                                    : "opacity-70 hover:opacity-90 z-10"
+                                                ? "z-20 scale-100"
+                                                : "opacity-70 hover:opacity-90 z-10"
                                                 }`}
                                             style={{
                                                 flex: isActive ? "0 0 60%" : "0 0 20%",

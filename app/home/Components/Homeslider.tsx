@@ -13,7 +13,7 @@ export default function HomeSlider() {
     useEffect(() => {
         const fetchSlider = async () => {
             try {
-                const res = await fetch("http://localhost:3000/api/homeslider");
+                const res = await fetch("/api/homeslider");
                 const data = await res.json();
 
                 if (Array.isArray(data) && data.length > 0) {

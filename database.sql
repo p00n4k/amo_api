@@ -71,9 +71,9 @@ CREATE TABLE IF NOT EXISTS project_images (
 CREATE TABLE IF NOT EXISTS collections (
     collection_id INT PRIMARY KEY AUTO_INCREMENT,
     collection_name VARCHAR(100) NOT NULL,     -- ✅ ชื่อคอลเลคชัน
-    type VARCHAR(100) NOT NULL,                -- ชนิดวัสดุ / series name
+    material_type VARCHAR(100) NOT NULL,                -- ชนิดวัสดุ / series name
     brand_id INT,
-    material_type ENUM('Surface', 'Furniture') NOT NULL,
+    type ENUM('Surface', 'Furniture', 'Other') NOT NULL,
     status BOOLEAN DEFAULT TRUE,
     description TEXT,
     image VARCHAR(255),
@@ -122,24 +122,4 @@ CREATE TABLE IF NOT EXISTS product_furnish_items (
     image VARCHAR(255) NOT NULL,
     link VARCHAR(255) NOT NULL
 );
-
--- ===================================
--- 🧩 MOCKUP DATA INSERTS (UPDATED)
--- ===================================
-
--- 🔹 Brands
-INSERT INTO brands (brand_name, brand_image, main_type, type, brand_url) VALUES
-('Potocco', '/uploads/brands/potocco.png', 'Furnishing', 'Wood', 'https://www.potocco.com'),
-('Amo Surface', '/uploads/brands/amo_surface_logo.png', 'Surface', 'Ceramic', 'https://amo.co.th'),
-('Amo Furniture', '/uploads/brands/amo_furniture_logo.png', 'Furnishing', 'Wood', 'https://amo.co.th'),
-('Cattelan Italia', '/uploads/brands/cattelan_italia.png', 'Furnishing', 'Metal', 'https://www.cattelanitalia.com'),
-('Amo Surface Premium', '/uploads/brands/amo_surface_premium.png', 'Surface', 'Porcelain', 'https://amo.co.th');
-
--- 🔹 Collections (✅ Updated to include collection_name)
-INSERT INTO collections (collection_name, type, brand_id, material_type, status, description, image, link, relate_link) VALUES
-('Marble White', 'Marble White', 2, 'Surface', TRUE, 'Italian marble surface with glossy finish', '/uploads/products/marble_white.jpg', 'https://example.com/products/marble_white', 'https://example.com/related/marble_series'),
-('Oak Natural', 'Oak Natural', 3, 'Furniture', FALSE, 'Wood-inspired surface', '/uploads/products/oak_natural.jpg', 'https://example.com/products/oak_natural', 'https://example.com/related/wood_collection'),
-('Onyx Grey', 'Onyx Grey', 5, 'Surface', TRUE, 'Luxurious porcelain surface with matte texture', '/uploads/products/onyx_grey.jpg', 'https://example.com/products/onyx_grey', 'https://example.com/related/onyx'),
-('Walnut Deep', 'Walnut Deep', 3, 'Furniture', TRUE, 'Elegant deep walnut wood finish', '/uploads/products/walnut_deep.jpg', 'https://example.com/products/walnut_deep', 'https://example.com/related/walnut'),
-('Travertine Classic', 'Travertine Classic', 2, 'Surface', TRUE, 'Natural travertine look surface', '/uploads/products/travertine_classic.jpg', 'https://example.com/products/travertine_classic', 'https://example.com/related/travertine');
 

@@ -8,7 +8,7 @@ export default function AboutPage() {
                 <div className="flex justify-between max-w-6xl mx-auto items-start px-4">
                     {/* Left badge */}
                     <div className="bg-white border-t-[6px] border-[#F4C27A] shadow-md p-4 rounded-b-3xl w-32">
-                        <div className="text-[#F4C27A] text-2xl font-bold">10+ Years</div>
+                        <div className="text-[#F4C27A] text-2xl font-bold">30+ Years</div>
                         <p className="text-gray-500 text-sm">of experience</p>
                     </div>
 
@@ -22,7 +22,7 @@ export default function AboutPage() {
 
                     {/* Right badge */}
                     <div className="bg-white border-t-[6px] border-[#F4C27A] shadow-md p-4 rounded-b-3xl w-32">
-                        <div className="text-[#F4C27A] text-2xl font-bold">300+</div>
+                        <div className="text-[#F4C27A] text-2xl font-bold">1000+</div>
                         <p className="text-gray-500 text-sm">Projects</p>
                     </div>
                 </div>

@@ -28,9 +28,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 interface Collection {
   collection_id: number;
   collection_name: string;
-  type: string;
+  material_type: string;
   brand_name: string;
-  material_type: 'Surface' | 'Furniture';
+  type: 'Surface' | 'Furniture';
   status: boolean;
   description: string;
   image: string;
@@ -106,11 +106,11 @@ export default function CollectionsPage() {
   const columns = [
     { title: 'ID', dataIndex: 'collection_id', width: 60 },
     { title: 'Collection Name', dataIndex: 'collection_name' },
-    { title: 'Type', dataIndex: 'type' },
+    { title: 'Material', dataIndex: 'material_type' },
     { title: 'Brand', dataIndex: 'brand_name' },
     {
-      title: 'Material',
-      dataIndex: 'material_type',
+      title: 'Type',
+      dataIndex: 'type',
       render: (val: string) => <Tag color={val === 'Surface' ? 'blue' : 'green'}>{val}</Tag>,
     },
     {
@@ -147,7 +147,7 @@ export default function CollectionsPage() {
             <Input />
           </Form.Item>
 
-          <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+          <Form.Item label="Material" name="material_type" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
@@ -159,10 +159,11 @@ export default function CollectionsPage() {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Material Type" name="material_type" rules={[{ required: true }]}>
+          <Form.Item label="Type" name="type" rules={[{ required: true }]}>
             <Select>
               <Select.Option value="Surface">Surface</Select.Option>
               <Select.Option value="Furniture">Furniture</Select.Option>
+              <Select.Option value="Other">Other</Select.Option>
             </Select>
           </Form.Item>
 

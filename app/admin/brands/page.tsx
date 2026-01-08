@@ -260,6 +260,7 @@ export default function BrandsPage() {
                         <Select>
                             <Select.Option value="Surface">Surface</Select.Option>
                             <Select.Option value="Furnishing">Furnishing</Select.Option>
+                            <Select.Option value="Other">Other</Select.Option>
                         </Select>
                     </Form.Item>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import BrandCard from "./BrandCard"; // Adjust this path based on where BrandCard is saved
 
 // Types
 interface Brand {
@@ -177,26 +177,12 @@ export default function BrandsSearchPage() {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {filteredBrands.map((brand) => (
-                            <a
+                            <BrandCard
                                 key={brand.brand_id}
-                                href={brand.brand_url || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-[#4A4A4A] rounded-xl overflow-hidden shadow-lg hover:scale-105 transition cursor-pointer"
-                            >
-                                <div className="relative h-40 bg-[#2E2E2E]">
-                                    <Image
-                                        src={brand.image}
-                                        alt={brand.brand_name}
-                                        fill
-                                        className="object-contain p-4"
-                                    />
-                                </div>
-                                <div className="p-4">
-                                    <h3 className="font-semibold text-lg">{brand.brand_name}</h3>
-                                    <p className="text-sm text-gray-300">{brand.type}</p>
-                                </div>
-                            </a>
+                                imageSrc={brand.image}
+                                redirectUrl={brand.brand_url || "#"}
+                                brandName={brand.brand_name}
+                            />
                         ))}
                     </div>
                 )}
