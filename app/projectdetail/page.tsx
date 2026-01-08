@@ -38,15 +38,11 @@ export default function ProjectDetail() {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(true);
-
     const handleCollectionClick = (c: Collection) => {
-        if (!c.status) {
-            alert("This product is discontinued. You will be redirected to a related collection.");
-            window.open(c.relate_link, "_blank");
-        } else {
-            window.open(c.link, "_blank");
-        }
+        const linkToOpen = c.status ? c.link : c.relate_link;
+        openExternalLink(linkToOpen);
     };
+
 
     useEffect(() => {
         if (!projectId) return;
@@ -98,6 +94,16 @@ export default function ProjectDetail() {
 
     const getPrevIndex = () => (current - 1 + project.project_images.length) % project.project_images.length;
     const getNextIndex = () => (current + 1) % project.project_images.length;
+    const openExternalLink = (url: string) => {
+        if (!url) return;
+
+        const finalUrl =
+            url.startsWith("http://") || url.startsWith("https://")
+                ? url
+                : `https://${url}`;
+
+        window.open(finalUrl, "_blank", "noopener,noreferrer");
+    };
 
     return (
         <div className="bg-[#4a4a4a] min-h-screen text-white overflow-x-hidden">
