@@ -94,7 +94,8 @@ export default function SignatureCollections() {
                                     className="rounded-full border border-gray-200"
                                 />
                                 <h3 className="text-2xl font-semibold text-gray-900">
-                                    {data.brand_name.toLowerCase()}
+                                    {data.brand_name?.toLowerCase() ?? ""}
+
                                 </h3>
                             </div>
 
@@ -121,7 +122,8 @@ export default function SignatureCollections() {
                                 ref={sliderRef}
                                 className="flex items-center justify-center overflow-x-auto gap-4 snap-x snap-mandatory scroll-smooth pb-6 scrollbar-hide"
                             >
-                                {data.images.map((img, i) => {
+                                {(data?.images ?? []).map((img, i) => {
+
                                     const isActive = i === activeIndex;
                                     return (
                                         <div
