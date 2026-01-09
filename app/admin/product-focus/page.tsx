@@ -249,14 +249,7 @@ export default function ProductFocusPage() {
                     >
                         Images
                     </Button>
-                    <Popconfirm
-                        title="Delete this focus?"
-                        onConfirm={() => handleDelete(record.focus_id)}
-                        okText="Yes"
-                        cancelText="No"
-                    >
-                        <Button danger icon={<DeleteOutlined />} size="small" />
-                    </Popconfirm>
+
                 </Space>
             ),
         },

@@ -69,7 +69,16 @@ export default function ProductPage() {
 
                     <div className="flex gap-4">
                         <a
-                            href={product?.link || "#"}
+                            href={
+                                product?.link
+                                    ? product.link.startsWith("http://") ||
+                                        product.link.startsWith("https://")
+                                        ? product.link
+                                        : `https://${product.link}`
+                                    : "#"
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="bg-white text-black font-semibold px-6 py-2 rounded-full shadow hover:bg-gray-200 transition"
                         >
                             Take a Look Here
@@ -83,6 +92,7 @@ export default function ProductPage() {
                         </a>
                     </div>
                 </div>
+
 
                 {/* ✅ Slide Controls */}
                 {product?.images?.length > 1 && (
