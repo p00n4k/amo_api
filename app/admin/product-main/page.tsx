@@ -247,12 +247,7 @@ export default function ProductMainPage() {
                     >
                         Images
                     </Button>
-                    <Popconfirm
-                        title="Delete this product?"
-                        onConfirm={() => handleDelete(record.id)}
-                    >
-                        <Button danger icon={<DeleteOutlined />} size="small" />
-                    </Popconfirm>
+            
                 </Space>
             ),
         },

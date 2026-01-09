@@ -425,12 +425,7 @@ export default function ProductFocusPage() {
                                         }}
                                     >
                                         <span>Order: {item.display_order}</span>
-                                        <Popconfirm
-                                            title="Delete this image?"
-                                            onConfirm={() => handleDeleteImage(item.image_id)}
-                                        >
-                                            <Button danger size="small" icon={<DeleteOutlined />} />
-                                        </Popconfirm>
+                                        
                                     </div>
                                 </div>
                             </List.Item>

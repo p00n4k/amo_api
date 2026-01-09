@@ -209,14 +209,7 @@ export default function ProductItemsPage() {
             render: (_: any, record: ProductItem) => (
                 <Space>
                     <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => showModal(record)} />
-                    <Popconfirm
-                        title="Delete this item?"
-                        onConfirm={() => handleDelete(record.item_id)}
-                        okText="Yes"
-                        cancelText="No"
-                    >
-                        <Button danger icon={<DeleteOutlined />} size="small" />
-                    </Popconfirm>
+                    
                 </Space>
             ),
         },
