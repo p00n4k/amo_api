@@ -94,7 +94,7 @@ export default function LastProjects() {
                             >
                                 <div className="flex flex-col sm:flex-row h-full">
                                     {/* Project Image */}
-                                    <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-auto">
+                                    <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-80">
                                         <img
                                             src={project.cover_image || "/uploads/default.jpg"}
                                             alt={project.project_name}
