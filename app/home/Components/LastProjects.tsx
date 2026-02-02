@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 interface Project {
@@ -48,15 +49,15 @@ export default function LastProjects() {
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
                     <div className="flex-1">
                         <h2 className="text-white text-sm md:text-base font-light mb-2 leading-relaxed max-w-md">
-                            Let us craft a place where trust<br />and style come together
+                            Let us craft a place where trust
+                            <br />
+                            and style come together
                         </h2>
                         <div className="flex items-center gap-4">
                             <p className="text-white/70 text-xs md:text-sm">
                                 Making your home uniquely yours.
                             </p>
-                            <button
-                                className="bg-[#F7931E] hover:bg-[#fba63c] text-white rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105"
-                            >
+                            <button className="bg-[#F7931E] hover:bg-[#fba63c] text-white rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105">
                                 View more
                             </button>
                         </div>
@@ -88,60 +89,63 @@ export default function LastProjects() {
                         ))
                     ) : projects.length > 0 ? (
                         projects.map((project, index) => (
-                            <div
+                            <Link
                                 key={`${project.project_id}-${index}`}
-                                className="bg-[#F6F0E8] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
+                                href={`/projectdetail?id=${project.project_id}`}
+                                className="block"
                             >
-                                <div className="flex flex-col sm:flex-row h-full">
-                                    {/* Project Image */}
-                                    <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-80">
-                                        <img
-                                            src={project.cover_image || "/uploads/default.jpg"}
-                                            alt={project.project_name}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                    </div>
+                                <div className="bg-[#F6F0E8] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
+                                    <div className="flex flex-col sm:flex-row h-full">
+                                        {/* Project Image */}
+                                        <div className="sm:w-1/2 relative overflow-hidden h-64 sm:h-80">
+                                            <img
+                                                src={project.cover_image || "/uploads/default.jpg"}
+                                                alt={project.project_name}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                            />
+                                        </div>
 
-                                    {/* Project Info */}
-                                    <div className="sm:w-1/2 p-6 sm:p-8 bg-[#F6F0E8] flex flex-col justify-between relative">
-                                        <div className="space-y-4">
-                                            <div className="flex items-start gap-2">
-                                                <MapPin className="w-5 h-5 text-[#3A3A3A]/60 flex-shrink-0 mt-0.5" />
-                                                <div>
-                                                    <h3 className="text-lg font-semibold text-[#3A3A3A]">
-                                                        {project.project_name}
-                                                    </h3>
-                                                    <p className="text-sm text-[#3A3A3A]/60">
-                                                        {formatDate(project.data_update)}
+                                        {/* Project Info */}
+                                        <div className="sm:w-1/2 p-6 sm:p-8 bg-[#F6F0E8] flex flex-col justify-between relative">
+                                            <div className="space-y-4">
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin className="w-5 h-5 text-[#3A3A3A]/60 flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-[#3A3A3A]">
+                                                            {project.project_name}
+                                                        </h3>
+                                                        <p className="text-sm text-[#3A3A3A]/60">
+                                                            {formatDate(project.data_update)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-4 border-t border-[#3A3A3A]/10">
+                                                    <p className="text-sm font-medium text-[#3A3A3A] mb-1">
+                                                        Primary Material
+                                                    </p>
+                                                    <p className="text-sm text-[#3A3A3A]/70">
+                                                        {project.project_category}
                                                     </p>
                                                 </div>
                                             </div>
 
-                                            <div className="pt-4 border-t border-[#3A3A3A]/10">
-                                                <p className="text-sm font-medium text-[#3A3A3A] mb-1">
-                                                    Primary Material
-                                                </p>
-                                                <p className="text-sm text-[#3A3A3A]/70">
-                                                    {project.project_category}
-                                                </p>
+                                            {/* Pagination Dots */}
+                                            <div className="flex gap-2 mt-6">
+                                                {[...Array(3)].map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`h-1.5 rounded-full transition-all ${i === 0
+                                                                ? "w-8 bg-[#F7931E]"
+                                                                : "w-1.5 bg-[#3A3A3A]/30"
+                                                            }`}
+                                                    />
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Pagination Dots */}
-                                        <div className="flex gap-2 mt-6">
-                                            {[...Array(3)].map((_, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`h-1.5 rounded-full transition-all ${i === 0
-                                                        ? "w-8 bg-[#F7931E]"
-                                                        : "w-1.5 bg-[#3A3A3A]/30"
-                                                        }`}
-                                                />
-                                            ))}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))
                     ) : (
                         <div className="col-span-2 text-center py-16">
