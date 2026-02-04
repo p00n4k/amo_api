@@ -255,7 +255,7 @@ export default function ProjectsPage() {
         { title: 'ID', dataIndex: 'collection_id', width: 70 },
         { title: 'Brand', dataIndex: 'brand_name' },
         { title: 'Type', dataIndex: 'type' },
-        { title: 'Material Type', dataIndex: 'material_type' },
+        { title: 'Item', dataIndex: 'material_type' },
         {
             title: 'Status',
             dataIndex: 'status',

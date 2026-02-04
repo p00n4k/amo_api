@@ -156,7 +156,7 @@ export default function CollectionsPage() {
       sorter: (a: Collection, b: Collection) => a.collection_name.localeCompare(b.collection_name),
     },
     {
-      title: 'Material',
+      title: 'Item',
       dataIndex: 'material_type'
     },
     {
@@ -272,11 +272,11 @@ export default function CollectionsPage() {
           </Form.Item>
 
           <Form.Item
-            label="Material Type"
+            label="Item"
             name="material_type"
-            rules={[{ required: true, message: 'Please enter material type' }]}
+            rules={[{ required: true, message: 'Item Name in Collection' }]}
           >
-            <Input placeholder="e.g. Wood, Metal, Fabric, Leather" size="large" />
+            <Input placeholder="Nero Marquina , EY09 Gold Catalan , Ivory" size="large" />
           </Form.Item>
 
           <Form.Item

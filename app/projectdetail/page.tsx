@@ -211,9 +211,9 @@ export default function ProjectDetail() {
                     <thead>
                         <tr className="border-b border-gray-600">
                             <th className="px-4 py-2">Collection Name</th>
-                            <th className="px-4 py-2">Type</th>
+                            <th className="px-4 py-2">Item</th>
                             <th className="px-4 py-2">Brand</th>
-                            <th className="px-4 py-2">Material</th>
+                            <th className="px-4 py-2">Type</th>
                             <th className="px-4 py-2">Status</th>
                             <th className="px-4 py-2 w-1/3">Description</th>
                         </tr>
@@ -227,9 +227,9 @@ export default function ProjectDetail() {
                                 className="border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition"
                             >
                                 <td className="px-4 py-2">{c.collection_name}</td>
-                                <td className="px-4 py-2">{c.type}</td>
-                                <td className="px-4 py-2">{c.brand_name}</td>
                                 <td className="px-4 py-2">{c.material_type}</td>
+                                <td className="px-4 py-2">{c.brand_name}</td>
+                                <td className="px-4 py-2">{c.type}</td>
                                 <td className="px-4 py-2">{c.status ? "Available" : "Discontinued"}</td>
                                 <td className="px-4 py-2 text-gray-300">{c.description}</td>
                             </tr>

@@ -14,6 +14,10 @@ const Surface = () => {
     const [surfaceItems, setSurfaceItems] = useState<SurfaceItem[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // ✅ lock heights (taller)
+    const SMALL_H = 'h-[320px] md:h-[420px] lg:h-[480px]';
+    const BIG_H = 'h-[640px] md:h-[840px] lg:h-[1000px]';
+
     useEffect(() => {
         fetchSurfaceItems();
     }, []);
@@ -30,39 +34,57 @@ const Surface = () => {
         }
     };
 
-    // ✅ First item -> Big card / Next 4 -> Small cards
     const bigCard = surfaceItems[0];
     const smallCards = surfaceItems.slice(1, 5);
+
+    const CardOverlay = () => (
+        <>
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all duration-300" />
+
+            <div className="absolute top-3 right-3 bg-white/20 rounded-full px-3 py-1 text-white text-sm backdrop-blur-sm group-hover:scale-105 transition">
+                ↗
+            </div>
+
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition duration-300">
+                <div className="bg-white/20 text-white text-sm md:text-base px-4 py-2 rounded-full backdrop-blur-sm">
+                    View detail more
+                </div>
+            </div>
+        </>
+    );
 
     return (
         <div className="mb-16">
             <h2 className="text-2xl font-semibold mb-6">Surface</h2>
-            <div className="grid grid-cols-3 gap-6">
 
-                {/* ✅ Left 2x2 Small Cards */}
+            <div className="grid grid-cols-3 gap-6">
+                {/* ✅ Left 2x2 Small Cards (LOCK HEIGHT + TALLER) */}
                 <div className="grid grid-cols-2 grid-rows-2 gap-6 col-span-2">
                     {loading ? (
-                        Array(4).fill(0).map((_, idx) => (
-                            <div key={idx} className="bg-white/5 rounded-xl animate-pulse aspect-square" />
-                        ))
+                        Array(4)
+                            .fill(0)
+                            .map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`bg-white/5 rounded-xl animate-pulse ${SMALL_H}`}
+                                />
+                            ))
                     ) : smallCards.length > 0 ? (
                         smallCards.map((item) => (
                             <Link
                                 key={item.item_id}
-                                href="/brands"   // ✅ All small cards go to /brands
-                                className="relative bg-white/5 rounded-xl overflow-hidden group cursor-pointer"
+                                href={item.link || '#'}
+                                className={`relative bg-white/5 rounded-xl overflow-hidden group cursor-pointer ${SMALL_H}`}
+                                aria-label="View detail more"
                             >
                                 <Image
                                     src={item.image}
                                     alt="Surface Item"
-                                    width={500}
-                                    height={500}
-                                    className="object-cover w-full h-full"
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 50vw, 33vw"
                                 />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
-                                <div className="absolute top-2 right-2 bg-white/20 rounded-full p-1 group-hover:scale-105 transition">
-                                    <span className="text-white text-xl">↗</span>
-                                </div>
+                                <CardOverlay />
                             </Link>
                         ))
                     ) : (
@@ -70,29 +92,35 @@ const Surface = () => {
                     )}
                 </div>
 
-                {/* ✅ Right Big Card → /brands */}
-                <div className="relative rounded-3xl overflow-hidden group h-full">
+                {/* ✅ Right Big Card (LOCK HEIGHT + TALLER) */}
+                <div className={`relative rounded-3xl overflow-hidden group ${BIG_H}`}>
                     {bigCard ? (
-                        <>
+                        <Link
+                            href={bigCard.link || '#'}
+                            className="relative block w-full h-full"
+                            aria-label="View detail more"
+                        >
                             <Image
                                 src={bigCard.image}
                                 alt="Surface Feature"
-                                width={1000}
-                                height={1000}
-                                className="object-cover w-full h-full"
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 100vw, 33vw"
                             />
 
-                            <Link href="/brands" className="absolute bottom-6 left-6">
-                                <div className="bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[220px] cursor-pointer hover:bg-white/30 transition">
+                            <CardOverlay />
+
+                            {/* Bottom label */}
+                            <div className="absolute bottom-6 left-6">
+                                <div className="bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[240px] hover:bg-white/30 transition">
                                     Surface <span className="ml-2 text-white">↗</span>
                                 </div>
-                            </Link>
-                        </>
+                            </div>
+                        </Link>
                     ) : (
                         <div className="bg-gray-300 animate-pulse w-full h-full rounded-3xl" />
                     )}
                 </div>
-
             </div>
         </div>
     );
