@@ -25,14 +25,16 @@ export default function SignatureCollections() {
   const [activeType, setActiveType] = useState<ActiveType>("surface");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+
   const sliderRef = useRef<HTMLDivElement>(null);
-  const repositionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollEndTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/productfocushomepage/${activeType}`, { cache: "no-store" });
+        const res = await fetch(`/api/productfocushomepage/${activeType}`, {
+          cache: "no-store",
+        });
         const json = await res.json();
         setItems(Array.isArray(json) ? json : []);
         setActiveIndex(0);
@@ -50,7 +52,7 @@ export default function SignatureCollections() {
   // ensure at least 5 cards and create infinite loop by duplicating items
   const loopItems = useMemo(() => {
     if (items.length === 0) return [];
-    
+
     let baseItems = items;
     if (items.length < MIN_CARDS) {
       const out: ProductFocusItem[] = [];
@@ -61,7 +63,7 @@ export default function SignatureCollections() {
       }
       baseItems = out;
     }
-    
+
     // Create infinite loop: add copies before and after
     return [...baseItems, ...baseItems, ...baseItems];
   }, [items]);
@@ -71,7 +73,7 @@ export default function SignatureCollections() {
 
   const activeItem = useMemo(() => {
     if (!total || loopItems.length === 0) return null;
-    const actualIndex = activeIndex % total;
+    const actualIndex = ((activeIndex % total) + total) % total;
     const baseItems = items.length >= MIN_CARDS ? items : loopItems.slice(0, total);
     return baseItems[actualIndex];
   }, [loopItems, activeIndex, total, items]);
@@ -81,26 +83,34 @@ export default function SignatureCollections() {
     if (!slider) return;
     const child = slider.children[index] as HTMLElement;
     if (child) {
-      child.scrollIntoView({ 
-        behavior: smooth ? "smooth" : "auto", 
-        inline: "center", 
-        block: "nearest" 
+      child.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        inline: "center",
+        block: "nearest",
       });
     }
   };
 
+  // Jump (no animation) to an index without visible "snap" (toggle scrollBehavior)
+  const jumpToIndex = (index: number) => {
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const prev = slider.style.scrollBehavior;
+    slider.style.scrollBehavior = "auto";
+
+    scrollToIndex(index, false);
+
+    requestAnimationFrame(() => {
+      slider.style.scrollBehavior = prev || "smooth";
+    });
+  };
+
   const go = (direction: number) => {
-    if (!total || isTransitioning) return;
-    
-    setIsTransitioning(true);
+    if (!total) return;
     const newIndex = activeIndex + direction;
     setActiveIndex(newIndex);
-    requestAnimationFrame(() => scrollToIndex(newIndex));
-    
-    // Allow next transition after animation completes
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 800); // Match the CSS transition duration
+    requestAnimationFrame(() => scrollToIndex(newIndex, true));
   };
 
   // Initialize to middle set on first load
@@ -108,49 +118,49 @@ export default function SignatureCollections() {
     if (loopItems.length > 0 && !isInitialized) {
       setActiveIndex(startIndex);
       setIsInitialized(true);
-      requestAnimationFrame(() => scrollToIndex(startIndex, false));
+      requestAnimationFrame(() => jumpToIndex(startIndex));
     }
   }, [loopItems.length, isInitialized, startIndex]);
 
-  // Handle infinite loop repositioning with improved timing
+  // Smooth infinite loop repositioning: wait until scroll ends, then jump (no animation)
   useEffect(() => {
-    if (!total || !isInitialized) return;
+    const slider = sliderRef.current;
+    if (!slider || !total || !isInitialized) return;
 
-    // Clear any existing timeout
-    if (repositionTimeoutRef.current) {
-      clearTimeout(repositionTimeoutRef.current);
-    }
-
-    // If we've scrolled past the end of the middle set, jump to the beginning
-    if (activeIndex >= startIndex + total) {
-      repositionTimeoutRef.current = setTimeout(() => {
-        const newIndex = startIndex + (activeIndex % total);
-        setActiveIndex(newIndex);
-        requestAnimationFrame(() => scrollToIndex(newIndex, false));
-      }, 800); // Wait for transition to complete
-    }
-    // If we've scrolled before the beginning of the middle set, jump to the end
-    else if (activeIndex < startIndex) {
-      repositionTimeoutRef.current = setTimeout(() => {
-        const newIndex = startIndex + total - 1 - ((startIndex - activeIndex - 1) % total);
-        setActiveIndex(newIndex);
-        requestAnimationFrame(() => scrollToIndex(newIndex, false));
-      }, 800); // Wait for transition to complete
-    }
-
-    return () => {
-      if (repositionTimeoutRef.current) {
-        clearTimeout(repositionTimeoutRef.current);
+    const handleRepositionIfNeeded = () => {
+      // If we've scrolled past the end of the middle set, jump back into middle set
+      if (activeIndex >= startIndex + total) {
+        const fixed = startIndex + (activeIndex % total);
+        setActiveIndex(fixed);
+        jumpToIndex(fixed);
+      }
+      // If we've scrolled before the beginning of the middle set, jump to end of middle set
+      else if (activeIndex < startIndex) {
+        const fixed = startIndex + total - 1 - ((startIndex - activeIndex - 1) % total);
+        setActiveIndex(fixed);
+        jumpToIndex(fixed);
       }
     };
-  }, [activeIndex, total, startIndex, isInitialized]);
 
-  // Center the active card when activeIndex changes
-  useEffect(() => {
-    if (total > 0 && isInitialized) {
-      scrollToIndex(activeIndex);
-    }
-  }, [activeIndex, total, isInitialized]);
+    const onScroll = () => {
+      if (scrollEndTimer.current) window.clearTimeout(scrollEndTimer.current);
+      // debounce: after user/animation stops scrolling, reposition
+      scrollEndTimer.current = window.setTimeout(handleRepositionIfNeeded, 120);
+    };
+
+    const onScrollEnd = () => handleRepositionIfNeeded();
+
+    slider.addEventListener("scroll", onScroll, { passive: true });
+    // @ts-ignore - not in TS lib for some versions
+    slider.addEventListener?.("scrollend", onScrollEnd);
+
+    return () => {
+      slider.removeEventListener("scroll", onScroll);
+      // @ts-ignore
+      slider.removeEventListener?.("scrollend", onScrollEnd);
+      if (scrollEndTimer.current) window.clearTimeout(scrollEndTimer.current);
+    };
+  }, [activeIndex, total, startIndex, isInitialized]);
 
   if (!total || !activeItem) {
     return <div className="text-center py-20 text-gray-400">Loading...</div>;
@@ -168,21 +178,19 @@ export default function SignatureCollections() {
           <div className="flex justify-center md:justify-end mt-6 md:mt-0 gap-3">
             <button
               onClick={() => setActiveType("surface")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
-                activeType === "surface"
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "surface"
                   ? "bg-orange-400 text-white border-orange-400"
                   : "text-gray-700 border-gray-300 hover:border-orange-400"
-              }`}
+                }`}
             >
               Surface
             </button>
             <button
               onClick={() => setActiveType("furnishing")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
-                activeType === "furnishing"
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "furnishing"
                   ? "bg-orange-400 text-white border-orange-400"
                   : "text-gray-700 border-gray-300 hover:border-orange-400"
-              }`}
+                }`}
             >
               Furnishing
             </button>
@@ -194,7 +202,7 @@ export default function SignatureCollections() {
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {/* --- Brand Info (changes when active changes) --- */}
             <div className="md:w-1/3">
-              <div className="flex items-center gap-3 mb-4 transition-all duration-500 ease-out">
+              <div className="flex items-center gap-3 mb-4">
                 <Image
                   src={activeItem.brand_image}
                   alt={activeItem.brand_name}
@@ -210,18 +218,16 @@ export default function SignatureCollections() {
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm leading-relaxed mb-3 transition-all duration-500 ease-out">
-                {activeItem.description}
-              </p>
+              <p className="text-gray-600 text-sm leading-relaxed mb-3">{activeItem.description}</p>
 
-              <p className="text-gray-800 text-sm mb-6 transition-all duration-500 ease-out">
+              <p className="text-gray-800 text-sm mb-6">
                 <span className="font-semibold">Made in :</span> {activeItem.made_in}
               </p>
 
               <Link
                 href={activeItem.link}
                 target="_blank"
-                className="inline-block text-orange-500 border border-orange-400 rounded-full px-5 py-2 text-sm hover:bg-orange-400 hover:text-white transition-all duration-300"
+                className="inline-block text-orange-500 border border-orange-400 rounded-full px-5 py-2 text-sm hover:bg-orange-400 hover:text-white transition"
               >
                 Visit Collection ↗
               </Link>
@@ -229,15 +235,13 @@ export default function SignatureCollections() {
               <div className="flex gap-2 mt-8">
                 <button
                   onClick={() => go(-1)}
-                  disabled={isTransitioning}
-                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition"
                 >
                   ←
                 </button>
                 <button
                   onClick={() => go(1)}
-                  disabled={isTransitioning}
-                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition"
                 >
                   →
                 </button>
@@ -248,10 +252,7 @@ export default function SignatureCollections() {
             <div className="md:w-2/3 relative rounded-3xl overflow-hidden bg-white">
               <div
                 ref={sliderRef}
-                className="flex items-center overflow-x-auto gap-4 snap-x snap-mandatory pb-6 scrollbar-hide px-4"
-                style={{
-                  scrollBehavior: 'smooth',
-                }}
+                className="flex items-center overflow-x-auto gap-4 snap-x snap-mandatory scroll-smooth pb-6 scrollbar-hide px-4"
               >
                 {loopItems.map((item, i) => {
                   const isActive = i === activeIndex;
@@ -259,24 +260,18 @@ export default function SignatureCollections() {
 
                   return (
                     <div
-                      key={`${item.focus_id}-${i}`}
+                      key={`${item.focus_id ?? "x"}-${i}`}
                       onClick={() => {
-                        if (!isTransitioning) {
-                          setIsTransitioning(true);
-                          setActiveIndex(i);
-                          scrollToIndex(i);
-                          setTimeout(() => setIsTransitioning(false), 800);
-                        }
+                        setActiveIndex(i);
+                        requestAnimationFrame(() => scrollToIndex(i, true));
                       }}
-                      className={`relative snap-center cursor-pointer ${
-                        isActive ? "z-20 opacity-100" : "opacity-60 hover:opacity-80 z-10"
-                      }`}
+                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
+                        }`}
                       style={{
                         flex: isActive ? "0 0 60%" : "0 0 20%",
                         height: "480px",
                         borderRadius: "1.5rem",
-                        transform: isActive ? "scale(1)" : "scale(0.92)",
-                        transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        transform: isActive ? "scale(1)" : "scale(0.95)",
                       }}
                     >
                       <Image
@@ -284,19 +279,13 @@ export default function SignatureCollections() {
                         alt={`${item.collection_name}-${i}`}
                         width={1200}
                         height={900}
-                        className="object-cover w-full h-full rounded-[1.5rem]"
+                        className="object-cover w-full h-full"
                         priority={isActive}
                       />
 
                       {/* small label */}
-                      <div 
-                        className="absolute bottom-3 left-3 right-3"
-                        style={{
-                          opacity: isActive ? 1 : 0.8,
-                          transition: "opacity 0.6s ease-in-out",
-                        }}
-                      >
-                        <div className="backdrop-blur-sm bg-white/80 rounded-xl px-3 py-2 shadow-lg">
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="backdrop-blur-sm bg-white/70 rounded-xl px-3 py-2">
                           <p className="text-gray-900 text-sm font-semibold truncate">
                             {item.collection_name}
                           </p>
@@ -312,7 +301,7 @@ export default function SignatureCollections() {
         </div>
       </div>
 
-      {/* 🧩 Hide Scrollbar & Smooth Scroll */}
+      {/* 🧩 Hide Scrollbar */}
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -320,11 +309,6 @@ export default function SignatureCollections() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
-        }
-        
-        /* Smooth scroll for all browsers */
-        html {
-          scroll-behavior: smooth;
         }
       `}</style>
     </section>
