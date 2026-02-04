@@ -19,15 +19,14 @@ interface ProductFocusItem {
 type ActiveType = "surface" | "furnishing";
 
 const MIN_CARDS = 5;
+const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 export default function SignatureCollections() {
   const [items, setItems] = useState<ProductFocusItem[]>([]);
   const [activeType, setActiveType] = useState<ActiveType>("surface");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const repositionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,17 +89,10 @@ export default function SignatureCollections() {
   };
 
   const go = (direction: number) => {
-    if (!total || isTransitioning) return;
-    
-    setIsTransitioning(true);
+    if (!total) return;
     const newIndex = activeIndex + direction;
     setActiveIndex(newIndex);
     requestAnimationFrame(() => scrollToIndex(newIndex));
-    
-    // Allow next transition after animation completes
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 800); // Match the CSS transition duration
   };
 
   // Initialize to middle set on first load
@@ -112,37 +104,24 @@ export default function SignatureCollections() {
     }
   }, [loopItems.length, isInitialized, startIndex]);
 
-  // Handle infinite loop repositioning with improved timing
+  // Handle infinite loop repositioning
   useEffect(() => {
     if (!total || !isInitialized) return;
 
-    // Clear any existing timeout
-    if (repositionTimeoutRef.current) {
-      clearTimeout(repositionTimeoutRef.current);
-    }
-
     // If we've scrolled past the end of the middle set, jump to the beginning
     if (activeIndex >= startIndex + total) {
-      repositionTimeoutRef.current = setTimeout(() => {
-        const newIndex = startIndex + (activeIndex % total);
-        setActiveIndex(newIndex);
-        requestAnimationFrame(() => scrollToIndex(newIndex, false));
-      }, 800); // Wait for transition to complete
+      setTimeout(() => {
+        setActiveIndex(startIndex + (activeIndex % total));
+        scrollToIndex(startIndex + (activeIndex % total), false);
+      }, 300);
     }
     // If we've scrolled before the beginning of the middle set, jump to the end
     else if (activeIndex < startIndex) {
-      repositionTimeoutRef.current = setTimeout(() => {
-        const newIndex = startIndex + total - 1 - ((startIndex - activeIndex - 1) % total);
-        setActiveIndex(newIndex);
-        requestAnimationFrame(() => scrollToIndex(newIndex, false));
-      }, 800); // Wait for transition to complete
+      setTimeout(() => {
+        setActiveIndex(startIndex + total - 1 - ((startIndex - activeIndex - 1) % total));
+        scrollToIndex(startIndex + total - 1 - ((startIndex - activeIndex - 1) % total), false);
+      }, 300);
     }
-
-    return () => {
-      if (repositionTimeoutRef.current) {
-        clearTimeout(repositionTimeoutRef.current);
-      }
-    };
   }, [activeIndex, total, startIndex, isInitialized]);
 
   // Center the active card when activeIndex changes
@@ -194,7 +173,7 @@ export default function SignatureCollections() {
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {/* --- Brand Info (changes when active changes) --- */}
             <div className="md:w-1/3">
-              <div className="flex items-center gap-3 mb-4 transition-all duration-500 ease-out">
+              <div className="flex items-center gap-3 mb-4">
                 <Image
                   src={activeItem.brand_image}
                   alt={activeItem.brand_name}
@@ -210,18 +189,18 @@ export default function SignatureCollections() {
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm leading-relaxed mb-3 transition-all duration-500 ease-out">
+              <p className="text-gray-600 text-sm leading-relaxed mb-3">
                 {activeItem.description}
               </p>
 
-              <p className="text-gray-800 text-sm mb-6 transition-all duration-500 ease-out">
+              <p className="text-gray-800 text-sm mb-6">
                 <span className="font-semibold">Made in :</span> {activeItem.made_in}
               </p>
 
               <Link
                 href={activeItem.link}
                 target="_blank"
-                className="inline-block text-orange-500 border border-orange-400 rounded-full px-5 py-2 text-sm hover:bg-orange-400 hover:text-white transition-all duration-300"
+                className="inline-block text-orange-500 border border-orange-400 rounded-full px-5 py-2 text-sm hover:bg-orange-400 hover:text-white transition"
               >
                 Visit Collection ↗
               </Link>
@@ -229,15 +208,13 @@ export default function SignatureCollections() {
               <div className="flex gap-2 mt-8">
                 <button
                   onClick={() => go(-1)}
-                  disabled={isTransitioning}
-                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition"
                 >
                   ←
                 </button>
                 <button
                   onClick={() => go(1)}
-                  disabled={isTransitioning}
-                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-500 transition"
                 >
                   →
                 </button>
@@ -248,10 +225,7 @@ export default function SignatureCollections() {
             <div className="md:w-2/3 relative rounded-3xl overflow-hidden bg-white">
               <div
                 ref={sliderRef}
-                className="flex items-center overflow-x-auto gap-4 snap-x snap-mandatory pb-6 scrollbar-hide px-4"
-                style={{
-                  scrollBehavior: 'smooth',
-                }}
+                className="flex items-center overflow-x-auto gap-4 snap-x snap-mandatory scroll-smooth pb-6 scrollbar-hide px-4"
               >
                 {loopItems.map((item, i) => {
                   const isActive = i === activeIndex;
@@ -261,22 +235,17 @@ export default function SignatureCollections() {
                     <div
                       key={`${item.focus_id}-${i}`}
                       onClick={() => {
-                        if (!isTransitioning) {
-                          setIsTransitioning(true);
-                          setActiveIndex(i);
-                          scrollToIndex(i);
-                          setTimeout(() => setIsTransitioning(false), 800);
-                        }
+                        setActiveIndex(i);
+                        scrollToIndex(i);
                       }}
-                      className={`relative snap-center cursor-pointer ${
-                        isActive ? "z-20 opacity-100" : "opacity-60 hover:opacity-80 z-10"
+                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${
+                        isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
                       }`}
                       style={{
                         flex: isActive ? "0 0 60%" : "0 0 20%",
                         height: "480px",
                         borderRadius: "1.5rem",
-                        transform: isActive ? "scale(1)" : "scale(0.92)",
-                        transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        transform: isActive ? "scale(1)" : "scale(0.95)",
                       }}
                     >
                       <Image
@@ -284,19 +253,13 @@ export default function SignatureCollections() {
                         alt={`${item.collection_name}-${i}`}
                         width={1200}
                         height={900}
-                        className="object-cover w-full h-full rounded-[1.5rem]"
+                        className="object-cover w-full h-full"
                         priority={isActive}
                       />
 
                       {/* small label */}
-                      <div 
-                        className="absolute bottom-3 left-3 right-3"
-                        style={{
-                          opacity: isActive ? 1 : 0.8,
-                          transition: "opacity 0.6s ease-in-out",
-                        }}
-                      >
-                        <div className="backdrop-blur-sm bg-white/80 rounded-xl px-3 py-2 shadow-lg">
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="backdrop-blur-sm bg-white/70 rounded-xl px-3 py-2">
                           <p className="text-gray-900 text-sm font-semibold truncate">
                             {item.collection_name}
                           </p>
@@ -312,7 +275,7 @@ export default function SignatureCollections() {
         </div>
       </div>
 
-      {/* 🧩 Hide Scrollbar & Smooth Scroll */}
+      {/* 🧩 Hide Scrollbar */}
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -320,11 +283,6 @@ export default function SignatureCollections() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
-        }
-        
-        /* Smooth scroll for all browsers */
-        html {
-          scroll-behavior: smooth;
         }
       `}</style>
     </section>
