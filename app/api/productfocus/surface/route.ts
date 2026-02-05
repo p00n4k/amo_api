@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 
 export async function GET() {
-  try {
-    const connection = await getConnection();
+  let connection: any;
 
-    // 🔹 Fetch Surface focus items (joined with brand and images)
+  try {
+    connection = await getConnection();
+
     const [rows] = await connection.execute(`
       SELECT 
+        pf.focus_id,
         pf.collection_name,
         b.brand_name,
         b.brand_image,
@@ -15,38 +17,47 @@ export async function GET() {
         pf.made_in,
         pf.type,
         pf.link,
-        pfi.image_url
+        (
+          SELECT pfi.image_url
+          FROM product_focus_images pfi
+          WHERE pfi.focus_id = pf.focus_id
+          ORDER BY pfi.display_order ASC
+          LIMIT 1
+        ) AS image_url
       FROM product_focus pf
       LEFT JOIN brands b ON pf.brand_id = b.brand_id
-      LEFT JOIN product_focus_images pfi ON pf.focus_id = pfi.focus_id
-      WHERE pf.type = 'Surface'
-      ORDER BY pf.focus_id, pfi.display_order ASC
+      WHERE pf.type = 'Furnishing'
+      ORDER BY pf.focus_id DESC
     `);
 
-    await connection.end();
-
     if (!Array.isArray(rows) || rows.length === 0) {
-      return NextResponse.json({ error: 'No surface product focus found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No furnishing product focus found' },
+        { status: 404 }
+      );
     }
 
-    // 🔹 Group image URLs together
-    const item = {
-      collection_name: rows[0].collection_name,
-      brand_name: rows[0].brand_name,
-      brand_image: rows[0].brand_image,
-      description: rows[0].description,
-      made_in: rows[0].made_in,
-      type: rows[0].type,
-      link: rows[0].link,
-      images: rows.map((r: any) => r.image_url),
-    };
+    const items = rows.map((r: any) => ({
+      focus_id: r.focus_id,
+      collection_name: r.collection_name,
+      brand_name: r.brand_name,
+      brand_image: r.brand_image,
+      description: r.description,
+      made_in: r.made_in,
+      type: r.type,
+      link: r.link,
+      images: r.image_url ? [r.image_url] : [], // 🔥 1 image only
+    }));
 
-    return NextResponse.json(item);
+    return NextResponse.json(items);
   } catch (error: any) {
-    console.error('Error fetching surface product focus:', error);
+    console.error('Error fetching furnishing product focus:', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch surface product focus', details: error.message },
+      { error: 'Failed to fetch furnishing product focus' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end(); // ✅ ปิด connection เสมอ
   }
 }
