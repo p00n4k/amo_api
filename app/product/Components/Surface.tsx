@@ -55,7 +55,23 @@ const Surface = () => {
 
     return (
         <div className="mb-16">
-            <h2 className="text-2xl font-semibold mb-6">Surface</h2>
+            <div className="flex items-center justify-between mb-6">
+  <h2 className="text-2xl font-semibold">Surface</h2>
+
+  <Link
+    href="/brands"
+    className="
+      bg-orange-500 text-white
+      px-5 py-2 rounded-full text-sm font-medium
+      hover:bg-orange-600
+      transition-all duration-300
+      shadow-md hover:shadow-lg
+    "
+  >
+    View All Brands →
+  </Link>
+</div>
+
 
             <div className="grid grid-cols-3 gap-6">
                 {/* ✅ Left 2x2 Small Cards (LOCK HEIGHT + TALLER) */}
@@ -111,11 +127,7 @@ const Surface = () => {
                             <CardOverlay />
 
                             {/* Bottom label */}
-                            <div className="absolute bottom-6 left-6">
-                                <div className="bg-white/20 text-white text-xl px-6 py-3 rounded-full backdrop-blur-sm flex items-center justify-between w-[240px] hover:bg-white/30 transition">
-                                    Surface <span className="ml-2 text-white">↗</span>
-                                </div>
-                            </div>
+                            
                         </Link>
                     ) : (
                         <div className="bg-gray-300 animate-pulse w-full h-full rounded-3xl" />
