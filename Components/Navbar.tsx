@@ -37,10 +37,10 @@ const Navbar = () => {
                         {/* Right navigation - Desktop only */}
                         <div className="navbar-right">
                             {/* Line Icon with hover effect */}
-                            <Link href="/" className="icon-link group">
+                            <a href="https://line.me/ti/p/~amocorner" className="icon-link group">
                                 <img src="/static/line.png" alt="Line Logo" className="icon" />
                                 <span className="hidden_line">amocorner</span>
-                            </Link>
+                            </a>
 
                             {/* Get in Touch Button */}
                             <Link href="/about" className="cta-button">Get in touch</Link>
@@ -67,10 +67,18 @@ const Navbar = () => {
                 <Link href="/projects" className="nav-link" onClick={closeMenu}>Project</Link>
 
                 {/* Line Icon */}
-                <Link href="/" className="icon-link" onClick={closeMenu}>
-                    <img src="/static/line.png" alt="Line Logo" className="icon" />
-                    <span className="hidden_line">amocorner</span>
-                </Link>
+                <a
+                href="https://line.me/ti/p/~amocorner"
+                className="icon-link"
+                onClick={closeMenu}
+                target="_blank"
+                rel="noopener noreferrer"
+                >
+                <img src="/static/line.png" alt="Line Logo" className="icon" />
+                <span className="hidden_line">amocorner</span>
+                </a>
+
+
 
                 {/* Get in Touch Button */}
                 <Link href="/about" className="cta-button" onClick={closeMenu}>Get in touch</Link>

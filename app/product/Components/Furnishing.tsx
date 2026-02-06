@@ -62,13 +62,13 @@ const Furnishing = () => {
     href="/brands"
     className="
       bg-orange-500 text-white
-      px-5 py-2 rounded-full text-sm font-medium
+      px-5 py-2 rounded-full text-lg font-bold
       hover:bg-orange-600
       transition-all duration-300
       shadow-md hover:shadow-lg
     "
   >
-    View All Brands →
+    View All Brands
   </Link>
 </div>
 
