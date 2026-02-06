@@ -1,12 +1,23 @@
-import { NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getConnection } from "@/lib/db";
+import type { RowDataPacket } from "mysql2";
+
+type ProductFocusRow = RowDataPacket & {
+  collection_name: string;
+  brand_name: string;
+  brand_image: string;
+  description: string;
+  made_in: string;
+  type: string;
+  link: string;
+  image_url: string | null; // LEFT JOIN อาจเป็น null
+};
 
 export async function GET() {
   try {
     const connection = await getConnection();
 
-    // 🔹 Join product_focus + brands + images
-    const [rows] = await connection.execute(`
+    const [rows] = await connection.execute<ProductFocusRow[]>(`
       SELECT 
         pf.collection_name,
         b.brand_name,
@@ -25,11 +36,10 @@ export async function GET() {
 
     await connection.end();
 
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return NextResponse.json({ error: 'No furnishing product focus found' }, { status: 404 });
+    if (!rows || rows.length === 0) {
+      return NextResponse.json({ error: "No furnishing found" }, { status: 404 });
     }
 
-    // 🔹 Group image URLs together
     const item = {
       collection_name: rows[0].collection_name,
       brand_name: rows[0].brand_name,
@@ -38,15 +48,14 @@ export async function GET() {
       made_in: rows[0].made_in,
       type: rows[0].type,
       link: rows[0].link,
-      images: rows.map((r: any) => r.image_url),
+      images: rows
+        .map((r) => r.image_url)
+        .filter((u): u is string => Boolean(u)),
     };
 
     return NextResponse.json(item);
-  } catch (error: any) {
-    console.error('Error fetching furnishing product focus:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch furnishing product focus', details: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

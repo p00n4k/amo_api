@@ -14,17 +14,21 @@ import {
     Popconfirm,
     Upload,
     Input,
+    Tag,
+    Card,
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     UploadOutlined,
+    ArrowUpOutlined,
+    ArrowDownOutlined,
 } from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Slider {
@@ -45,19 +49,17 @@ export default function HomeSlidersPage() {
     const [form] = Form.useForm();
     const [uploading, setUploading] = useState(false);
 
-    // ✅ watch image_url (reactive preview)
     const imageUrl = Form.useWatch('image_url', form);
 
-    // ✅ upload to /api/admin/upload
+    // Sort data by display_order
+    const sortedData = data ? [...data].sort((a, b) => a.display_order - b.display_order) : [];
+
     const handleUpload = async (file: File) => {
         try {
             setUploading(true);
 
             const formData = new FormData();
             formData.append('file', file);
-
-            // (optional) ถ้าคุณอยากแยกโฟลเดอร์ homeslider:
-            // formData.append('folder', 'homeslider');
 
             const res = await axios.post('/api/admin/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -91,7 +93,13 @@ export default function HomeSlidersPage() {
             });
         } else {
             setEditingSlider(null);
-            form.resetFields();
+            // Auto-assign next available order
+            const maxOrder = sortedData.length > 0 
+                ? Math.max(...sortedData.map(s => s.display_order))
+                : 0;
+            form.setFieldsValue({
+                display_order: maxOrder + 1,
+            });
         }
         setIsModalOpen(true);
     };
@@ -100,7 +108,6 @@ export default function HomeSlidersPage() {
         try {
             const values = await form.validateFields();
 
-            // ✅ safety: ensure string only
             if (typeof values.image_url !== 'string') {
                 message.error('Invalid image_url');
                 return;
@@ -137,53 +144,122 @@ export default function HomeSlidersPage() {
         }
     };
 
+    // Move slider up or down
+    const moveSlider = async (slider: Slider, direction: 'up' | 'down') => {
+        const currentIndex = sortedData.findIndex((s) => s.slider_id === slider.slider_id);
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (targetIndex < 0 || targetIndex >= sortedData.length) return;
+
+        const targetSlider = sortedData[targetIndex];
+
+        try {
+            // Swap display orders
+            await Promise.all([
+                axios.put('/api/admin/homeslider', {
+                    slider_id: slider.slider_id,
+                    image_url: slider.image_url,
+                    display_order: targetSlider.display_order,
+                }),
+                axios.put('/api/admin/homeslider', {
+                    slider_id: targetSlider.slider_id,
+                    image_url: targetSlider.image_url,
+                    display_order: slider.display_order,
+                }),
+            ]);
+
+            message.success('Order updated!');
+            mutate();
+        } catch (err) {
+            console.error(err);
+            message.error('Failed to update order!');
+        }
+    };
+
     const columns = [
         {
-            title: 'ID',
-            dataIndex: 'slider_id',
-            key: 'slider_id',
-            width: 70,
+            title: 'Position',
+            dataIndex: 'display_order',
+            key: 'display_order',
+            width: 140,
+            render: (order: number, record: Slider, index: number) => (
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                    <Tag 
+                        color="blue" 
+                        style={{ 
+                            fontSize: '16px', 
+                            padding: '6px 16px',
+                            fontWeight: 'bold',
+                            width: '100%',
+                            textAlign: 'center'
+                        }}
+                    >
+                        #{order}
+                    </Tag>
+                    <Space.Compact style={{ width: '100%' }}>
+                        <Button
+                            type="default"
+                            size="small"
+                            icon={<ArrowUpOutlined />}
+                            disabled={index === 0}
+                            onClick={() => moveSlider(record, 'up')}
+                            title="Move up"
+                            style={{ flex: 1 }}
+                        />
+                        <Button
+                            type="default"
+                            size="small"
+                            icon={<ArrowDownOutlined />}
+                            disabled={index === sortedData.length - 1}
+                            onClick={() => moveSlider(record, 'down')}
+                            title="Move down"
+                            style={{ flex: 1 }}
+                        />
+                    </Space.Compact>
+                </Space>
+            ),
         },
         {
-            title: 'Image',
+            title: 'Image Preview',
             dataIndex: 'image_url',
             key: 'image_url',
-            width: 220,
+            width: 240,
             render: (url: string) => (
                 <Image
                     src={url}
                     alt="Slider"
-                    width={150}
-                    height={80}
-                    style={{ objectFit: 'cover' }}
+                    width={180}
+                    height={100}
+                    style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #f0f0f0' }}
+                    preview={{
+                        mask: 'Preview',
+                    }}
                 />
             ),
         },
         {
-            title: 'Display Order',
-            dataIndex: 'display_order',
-            key: 'display_order',
-            width: 150,
-        },
-        {
             title: 'Actions',
             key: 'actions',
-            width: 150,
+            width: 180,
             render: (_: any, record: Slider) => (
                 <Space>
                     <Button
                         type="primary"
                         icon={<EditOutlined />}
-                        size="small"
+                        size="middle"
                         onClick={() => showModal(record)}
-                    />
+                    >
+                        Edit
+                    </Button>
                     <Popconfirm
                         title="Delete this slider?"
+                        description="This action cannot be undone."
                         onConfirm={() => handleDelete(record.slider_id)}
                         okText="Yes"
                         cancelText="No"
+                        okButtonProps={{ danger: true }}
                     >
-                        <Button danger icon={<DeleteOutlined />} size="small" />
+                        <Button danger icon={<DeleteOutlined />} size="middle" />
                     </Popconfirm>
                 </Space>
             ),
@@ -194,29 +270,61 @@ export default function HomeSlidersPage() {
     if (!data) return <div>Loading...</div>;
 
     return (
-        <div>
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 16,
-                }}
+        <div style={{ padding: '24px' }}>
+            <Card 
+                bordered={false}
+                style={{ marginBottom: 24 }}
             >
-                <Title level={2}>Home Sliders Management</Title>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-                    Add Slider
-                </Button>
-            </div>
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                    }}
+                >
+                    <div>
+                        <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+                            Home Sliders Management
+                        </Title>
+                        <Space direction="vertical" size={2}>
+                            <Text type="secondary">
+                                • Use ⬆️⬇️ buttons to move sliders one position at a time
+                            </Text>
+                            <Text type="secondary">
+                                • Total sliders: <strong>{sortedData.length}</strong>
+                            </Text>
+                        </Space>
+                    </div>
+                    <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />} 
+                        onClick={() => showModal()} 
+                        size="large"
+                    >
+                        Add New Slider
+                    </Button>
+                </div>
+            </Card>
 
             <Table
                 columns={columns}
-                dataSource={data}
+                dataSource={sortedData}
                 rowKey="slider_id"
-                pagination={{ pageSize: 10 }}
+                pagination={false}
+                bordered
+                size="middle"
+                style={{ backgroundColor: 'white' }}
             />
 
             <Modal
-                title={editingSlider ? 'Edit Slider' : 'Add Slider'}
+                title={
+                    <Space>
+                        <span>{editingSlider ? 'Edit Slider' : 'Add New Slider'}</span>
+                        {editingSlider && (
+                            <Tag color="blue">Position #{editingSlider.display_order}</Tag>
+                        )}
+                    </Space>
+                }
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={() => {
@@ -225,9 +333,9 @@ export default function HomeSlidersPage() {
                 }}
                 width={600}
                 destroyOnClose
+                okText={editingSlider ? 'Update' : 'Create'}
             >
-                <Form form={form} layout="vertical">
-                    {/* ✅ เก็บค่า image_url จริงใน Form แบบ hidden input */}
+                <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
                     <Form.Item
                         name="image_url"
                         hidden
@@ -236,9 +344,18 @@ export default function HomeSlidersPage() {
                         <Input />
                     </Form.Item>
 
-                    {/* ✅ Form.Item นี้ไม่มี name และมี child แค่ 1 ตัว (Space) */}
-                    <Form.Item label="Image" required>
-                        <Space direction="vertical" style={{ width: '100%' }}>
+                    <Form.Item 
+                        label={
+                            <Space>
+                                <span>Slider Image</span>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    (Recommended: 1920x600px)
+                                </Text>
+                            </Space>
+                        } 
+                        required
+                    >
+                        <Space direction="vertical" style={{ width: '100%' }} size="large">
                             <Upload
                                 name="file"
                                 showUploadList={false}
@@ -246,50 +363,85 @@ export default function HomeSlidersPage() {
                                     try {
                                         const uploadedPath = await handleUpload(file as File);
                                         if (!uploadedPath) throw new Error('No uploaded path');
-                                        // form.setFieldValue ถูกทำใน handleUpload แล้ว แต่ทำซ้ำก็ได้
                                         form.setFieldValue('image_url', uploadedPath);
                                         onSuccess?.({ ok: true });
                                     } catch (e) {
                                         onError?.(e as any);
                                     }
                                 }}
+                                accept="image/*"
                             >
-                                <Button icon={<UploadOutlined />} loading={uploading}>
-                                    Upload Image
+                                <Button 
+                                    icon={<UploadOutlined />} 
+                                    loading={uploading} 
+                                    block 
+                                    size="large"
+                                    type={imageUrl ? 'default' : 'primary'}
+                                >
+                                    {imageUrl ? '✓ Change Image' : 'Upload Image'}
                                 </Button>
                             </Upload>
 
                             {typeof imageUrl === 'string' && imageUrl.length > 0 && (
-                                <Image
-                                    src={imageUrl}
-                                    alt="Preview"
-                                    width={150}
-                                    style={{ marginTop: 10, borderRadius: 4 }}
-                                />
+                                <Card 
+                                    size="small" 
+                                    style={{ textAlign: 'center' }}
+                                    bodyStyle={{ padding: 12 }}
+                                >
+                                    <Image
+                                        src={imageUrl}
+                                        alt="Preview"
+                                        width="100%"
+                                        style={{ borderRadius: 4 }}
+                                    />
+                                </Card>
                             )}
                         </Space>
                     </Form.Item>
 
                     <Form.Item
-                        label="Display Order"
+                        label={
+                            <Space>
+                                <span>Display Position</span>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    (Lower number = appears first)
+                                </Text>
+                            </Space>
+                        }
                         name="display_order"
                         rules={[{ required: true, message: 'Please input display order!' }]}
+                        extra={
+                            editingSlider 
+                                ? "Change this to reorder the slider manually" 
+                                : `Auto-assigned to position ${sortedData.length + 1}. You can change this.`
+                        }
                     >
-                        <InputNumber min={1} style={{ width: '100%' }} />
+                        <InputNumber 
+                            min={1} 
+                            style={{ width: '100%' }}
+                            placeholder="e.g., 1 (first), 2 (second), etc."
+                            size="large"
+                            addonBefore="#"
+                        />
                     </Form.Item>
                 </Form>
             </Modal>
 
-            <Image
-                src="/static/homepage.png"
-                alt="Homepage Preview"
-                width={900}
-                style={{
-                    marginTop: 40,
-                    borderRadius: 8,
-                    display: 'block',
-                }}
-            />
+            <Card 
+                title="Homepage Preview Reference" 
+                style={{ marginTop: 40 }}
+                bordered={false}
+            >
+                <Image
+                    src="/static/homepage.png"
+                    alt="Homepage Preview"
+                    width="100%"
+                    style={{
+                        borderRadius: 8,
+                        border: '1px solid #f0f0f0',
+                    }}
+                />
+            </Card>
         </div>
     );
 }

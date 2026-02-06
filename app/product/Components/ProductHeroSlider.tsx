@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link"; // ✅ เพิ่ม
 import ProductGallery from "./ProductGallery";
 
 export default function ProductPage() {
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [currentIndex, setCurrentIndex] = useState(0); // ✅ สำหรับ slider
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
         const loadProduct = async () => {
@@ -30,7 +31,7 @@ export default function ProductPage() {
         loadProduct();
     }, []);
 
-    // ✅ Auto Slide (ทุก 5 วินาที)
+    // ✅ Auto Slide
     useEffect(() => {
         if (!product?.images || product.images.length < 2) return;
         const interval = setInterval(() => {
@@ -52,8 +53,9 @@ export default function ProductPage() {
                         src={img}
                         alt={product.collection_name}
                         fill
-                        className={`object-cover absolute inset-0 transition-opacity duration-1000 ${index === currentIndex ? "opacity-100" : "opacity-0"
-                            }`}
+                        className={`object-cover absolute inset-0 transition-opacity duration-1000 ${
+                            index === currentIndex ? "opacity-100" : "opacity-0"
+                        }`}
                     />
                 ))}
 
@@ -72,7 +74,7 @@ export default function ProductPage() {
                             href={
                                 product?.link
                                     ? product.link.startsWith("http://") ||
-                                        product.link.startsWith("https://")
+                                      product.link.startsWith("https://")
                                         ? product.link
                                         : `https://${product.link}`
                                     : "#"
@@ -93,14 +95,15 @@ export default function ProductPage() {
                     </div>
                 </div>
 
-
-                {/* ✅ Slide Controls */}
+                {/* Slide Controls */}
                 {product?.images?.length > 1 && (
                     <>
                         <button
                             onClick={() =>
                                 setCurrentIndex(
-                                    (prev) => (prev - 1 + product.images.length) % product.images.length
+                                    (prev) =>
+                                        (prev - 1 + product.images.length) %
+                                        product.images.length
                                 )
                             }
                             className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-3xl z-20 hover:text-gray-300"
@@ -110,7 +113,9 @@ export default function ProductPage() {
 
                         <button
                             onClick={() =>
-                                setCurrentIndex((prev) => (prev + 1) % product.images.length)
+                                setCurrentIndex(
+                                    (prev) => (prev + 1) % product.images.length
+                                )
                             }
                             className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl z-20 hover:text-gray-300"
                         >
@@ -120,7 +125,7 @@ export default function ProductPage() {
                 )}
             </div>
 
-            {/* ✅ Banner Section */}
+            {/* ✅ Banner Section (เพิ่มปุ่ม Brands ด้านล่าง) */}
             <div className="bg-[#3a3a3a] px-4 py-6 flex justify-center items-center">
                 <div className="w-full max-w-7xl h-[150px] rounded-xl overflow-hidden shadow-lg relative">
                     <Image
@@ -129,10 +134,16 @@ export default function ProductPage() {
                         fill
                         className="object-cover"
                     />
+
+                    {/* Gradient Overlay */}
+                
+
+                    {/* ✅ Brands Button */}
+                    
                 </div>
             </div>
 
-            {/* ✅ Product Gallery */}
+            {/* Product Gallery */}
             <div id="product-gallery">
                 <ProductGallery />
             </div>

@@ -78,20 +78,29 @@ export default function SignatureCollections() {
     return baseItems[actualIndex];
   }, [loopItems, activeIndex, total, items]);
 
+  /**
+   * ✅ IMPORTANT FIX:
+   * Replace scrollIntoView() (can scroll the whole page vertically)
+   * with slider.scrollTo({ left }) (only horizontal movement)
+   */
   const scrollToIndex = (index: number, smooth: boolean = true) => {
     const slider = sliderRef.current;
     if (!slider) return;
-    const child = slider.children[index] as HTMLElement;
-    if (child) {
-      child.scrollIntoView({
-        behavior: smooth ? "smooth" : "auto",
-        inline: "center",
-        block: "nearest",
-      });
-    }
+
+    const child = slider.children[index] as HTMLElement | undefined;
+    if (!child) return;
+
+    // center the card horizontally inside the slider
+    const targetLeft =
+      child.offsetLeft - (slider.clientWidth / 2 - child.clientWidth / 2);
+
+    slider.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: smooth ? "smooth" : "auto",
+    });
   };
 
-  // Jump (no animation) to an index without visible "snap" (toggle scrollBehavior)
+  // Jump (no animation) to an index without visible "snap"
   const jumpToIndex = (index: number) => {
     const slider = sliderRef.current;
     if (!slider) return;
@@ -144,14 +153,13 @@ export default function SignatureCollections() {
 
     const onScroll = () => {
       if (scrollEndTimer.current) window.clearTimeout(scrollEndTimer.current);
-      // debounce: after user/animation stops scrolling, reposition
       scrollEndTimer.current = window.setTimeout(handleRepositionIfNeeded, 120);
     };
 
     const onScrollEnd = () => handleRepositionIfNeeded();
 
     slider.addEventListener("scroll", onScroll, { passive: true });
-    // @ts-ignore - not in TS lib for some versions
+    // @ts-ignore
     slider.addEventListener?.("scrollend", onScrollEnd);
 
     return () => {
@@ -178,19 +186,21 @@ export default function SignatureCollections() {
           <div className="flex justify-center md:justify-end mt-6 md:mt-0 gap-3">
             <button
               onClick={() => setActiveType("surface")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "surface"
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
+                activeType === "surface"
                   ? "bg-orange-400 text-white border-orange-400"
                   : "text-gray-700 border-gray-300 hover:border-orange-400"
-                }`}
+              }`}
             >
               Surface
             </button>
             <button
               onClick={() => setActiveType("furnishing")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "furnishing"
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
+                activeType === "furnishing"
                   ? "bg-orange-400 text-white border-orange-400"
                   : "text-gray-700 border-gray-300 hover:border-orange-400"
-                }`}
+              }`}
             >
               Furnishing
             </button>
@@ -200,7 +210,7 @@ export default function SignatureCollections() {
         {/* ===== CONTENT CARD ===== */}
         <div className="bg-white rounded-2xl p-10 md:p-12">
           <div className="flex flex-col md:flex-row gap-8 items-start">
-            {/* --- Brand Info (changes when active changes) --- */}
+            {/* --- Brand Info --- */}
             <div className="md:w-1/3">
               <div className="flex items-center gap-3 mb-4">
                 <Image
@@ -248,7 +258,7 @@ export default function SignatureCollections() {
               </div>
             </div>
 
-            {/* --- Image Slider (centered active card) --- */}
+            {/* --- Image Slider --- */}
             <div className="md:w-2/3 relative rounded-3xl overflow-hidden bg-white">
               <div
                 ref={sliderRef}
@@ -265,8 +275,9 @@ export default function SignatureCollections() {
                         setActiveIndex(i);
                         requestAnimationFrame(() => scrollToIndex(i, true));
                       }}
-                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
-                        }`}
+                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${
+                        isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
+                      }`}
                       style={{
                         flex: isActive ? "0 0 60%" : "0 0 20%",
                         height: "480px",
