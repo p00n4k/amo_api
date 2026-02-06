@@ -74,7 +74,12 @@ const Footer = () => {
           width={260}
           height={28}
         />
-
+        <a
+          href="https://line.me/ti/p/~amocorner"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cursor-pointer"
+        >
         <Image
           src="/static/line-bottom.png"
           alt="LINE"
@@ -82,6 +87,7 @@ const Footer = () => {
           height={28}
           className="w-auto h-[28px] object-contain"
         />
+        </a>
 
         {/* Facebook */}
         <a

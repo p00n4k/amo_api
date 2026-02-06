@@ -57,9 +57,11 @@ export default function LastProjects() {
                             <p className="text-white/70 text-xs md:text-sm">
                                 Making your home uniquely yours.
                             </p>
-                            <button className="bg-[#F7931E] hover:bg-[#fba63c] text-white rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105">
-                                View more
-                            </button>
+                            <Link href="/projects">
+  <button className="bg-[#F7931E] hover:bg-[#fba63c] text-white rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105">
+    View more
+  </button>
+</Link>
                         </div>
                     </div>
                     <h1 className="text-[150px] leading-none font-bold text-white/10">
