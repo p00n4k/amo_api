@@ -370,7 +370,12 @@ export default function CollectionsPage() {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={collections} rowKey="collection_id" />
+      <Table
+        columns={columns}
+        dataSource={collections}
+        rowKey="collection_id"
+        scroll={{ x: 1400 }}
+      />
 
       <Modal
         title={editing ? 'Edit Collection' : 'Add Collection'}
