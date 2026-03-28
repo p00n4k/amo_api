@@ -15,8 +15,8 @@ export async function GET() {
         brand_image AS image,
         brand_url
       FROM brands
-      WHERE main_type = 'Furnishing'
-      ORDER BY brand_id ASC
+      WHERE main_type = 'Furnishing' AND active = 1
+      ORDER BY brand_id ASC 
     `);
 
     await connection.end();

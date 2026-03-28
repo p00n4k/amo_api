@@ -6,7 +6,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 }
-
 export const config = {
-  matcher: ["/"],
+  matcher: ["/((?!_next|uploads|api|favicon.ico).*)"],
 };
+

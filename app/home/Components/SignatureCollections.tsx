@@ -18,8 +18,6 @@ interface ProductFocusItem {
 
 type ActiveType = "surface" | "furnishing";
 
-const MIN_CARDS = 5;
-
 export default function SignatureCollections() {
   const [items, setItems] = useState<ProductFocusItem[]>([]);
   const [activeType, setActiveType] = useState<ActiveType>("surface");
@@ -49,34 +47,21 @@ export default function SignatureCollections() {
     fetchData();
   }, [activeType]);
 
-  // ensure at least 5 cards and create infinite loop by duplicating items
+  // create infinite loop by duplicating items (no minimum required)
   const loopItems = useMemo(() => {
     if (items.length === 0) return [];
-
-    let baseItems = items;
-    if (items.length < MIN_CARDS) {
-      const out: ProductFocusItem[] = [];
-      let i = 0;
-      while (out.length < MIN_CARDS) {
-        out.push(items[i % items.length]);
-        i++;
-      }
-      baseItems = out;
-    }
-
     // Create infinite loop: add copies before and after
-    return [...baseItems, ...baseItems, ...baseItems];
+    return [...items, ...items, ...items];
   }, [items]);
 
-  const total = items.length >= MIN_CARDS ? items.length : MIN_CARDS;
+  const total = items.length;
   const startIndex = total; // Start at the middle set
 
   const activeItem = useMemo(() => {
     if (!total || loopItems.length === 0) return null;
     const actualIndex = ((activeIndex % total) + total) % total;
-    const baseItems = items.length >= MIN_CARDS ? items : loopItems.slice(0, total);
-    return baseItems[actualIndex];
-  }, [loopItems, activeIndex, total, items]);
+    return items[actualIndex];
+  }, [items, activeIndex, total, loopItems.length]);
 
   /**
    * ✅ IMPORTANT FIX:
@@ -186,21 +171,19 @@ export default function SignatureCollections() {
           <div className="flex justify-center md:justify-end mt-6 md:mt-0 gap-3">
             <button
               onClick={() => setActiveType("surface")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
-                activeType === "surface"
-                  ? "bg-orange-400 text-white border-orange-400"
-                  : "text-gray-700 border-gray-300 hover:border-orange-400"
-              }`}
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "surface"
+                ? "bg-orange-400 text-white border-orange-400"
+                : "text-gray-700 border-gray-300 hover:border-orange-400"
+                }`}
             >
               Surface
             </button>
             <button
               onClick={() => setActiveType("furnishing")}
-              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${
-                activeType === "furnishing"
-                  ? "bg-orange-400 text-white border-orange-400"
-                  : "text-gray-700 border-gray-300 hover:border-orange-400"
-              }`}
+              className={`px-5 py-2 rounded-full border text-sm transition-all duration-300 ${activeType === "furnishing"
+                ? "bg-orange-400 text-white border-orange-400"
+                : "text-gray-700 border-gray-300 hover:border-orange-400"
+                }`}
             >
               Furnishing
             </button>
@@ -275,9 +258,8 @@ export default function SignatureCollections() {
                         setActiveIndex(i);
                         requestAnimationFrame(() => scrollToIndex(i, true));
                       }}
-                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${
-                        isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
-                      }`}
+                      className={`relative snap-center cursor-pointer transition-all duration-700 ease-in-out ${isActive ? "z-20 opacity-100" : "opacity-70 hover:opacity-90 z-10"
+                        }`}
                       style={{
                         flex: isActive ? "0 0 60%" : "0 0 20%",
                         height: "480px",

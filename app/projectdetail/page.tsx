@@ -1,7 +1,6 @@
-export const dynamic = "force-dynamic";
+'use client';
 
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { LibraryBig } from "lucide-react";
 import Link from 'next/link';
@@ -28,7 +27,7 @@ interface ProjectDetailAPI {
     collections: Collection[];
 }
 
-export default function ProjectDetail() {
+function ProjectDetailContent() {
     const searchParams = useSearchParams();
     const projectId = searchParams.get("id");
 
@@ -240,5 +239,17 @@ export default function ProjectDetail() {
             </div>
 
         </div>
+    );
+}
+
+export default function ProjectDetail() {
+    return (
+        <Suspense fallback={
+            <div className="bg-[#4a4a4a] min-h-screen text-white flex items-center justify-center">
+                <p className="text-xl">Loading project...</p>
+            </div>
+        }>
+            <ProjectDetailContent />
+        </Suspense>
     );
 }

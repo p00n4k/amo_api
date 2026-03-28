@@ -6,6 +6,7 @@ import Image from 'next/image';
 interface Collection {
     collection_id: number;
     type: string;
+    collection_name: string; // ← add this line
 }
 
 interface Project {
@@ -108,8 +109,8 @@ const ProjectPage = () => {
                     <button
                         key={tab}
                         className={`pb-2 text-lg font-medium transition ${activeTab === tab
-                                ? 'border-b-4 border-white text-white'
-                                : 'text-gray-400 hover:text-gray-200'
+                            ? 'border-b-4 border-white text-white'
+                            : 'text-gray-400 hover:text-gray-200'
                             }`}
                         onClick={() => setActiveTab(tab)}
                     >
@@ -164,7 +165,7 @@ const ProjectPage = () => {
 
                                     {project.collections?.length > 0 && (
                                         <p className="text-sm text-gray-700 mt-2">
-                                            <strong>Collections:</strong> {project.collections.map((c) => c.type).join(', ')}
+                                            <strong>Collections:</strong> {project.collections.map((c) => c.collection_name).join(', ')}
                                         </p>
                                     )}
                                 </div>

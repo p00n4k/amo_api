@@ -17,7 +17,7 @@ export async function GET(req: Request) {
         brand_image AS image,
         brand_url
       FROM brands
-      WHERE main_type = 'Furnishing'
+      WHERE main_type = 'Furnishing' AND active = 1;
     `;
 
     if (type) {

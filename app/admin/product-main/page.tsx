@@ -260,9 +260,7 @@ export default function ProductMainPage() {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Title level={2}>Product Main Management</Title>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-                    Add Product Main
-                </Button>
+               
             </div>
 
             <Table columns={columns} dataSource={data} rowKey="id" pagination={{ pageSize: 10 }} />

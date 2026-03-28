@@ -5,14 +5,23 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '4', 10);
+    const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = (page - 1) * limit;
 
     const connection = await getConnection();
 
-    // ✅ Query Commercial Projects
+    // ✅ 1) TOTAL COUNT (สำคัญมากสำหรับ pagination)
+    const [countRows]: any = await connection.query(`
+      SELECT COUNT(*) AS total
+      FROM projects p
+      WHERE p.project_category = 'Commercial'
+    `);
+
+    const total = Number(countRows?.[0]?.total ?? 0);
+
+    // ✅ 2) Query Commercial Projects (paged)
     const [projects] = await connection.query(`
-      SELECT 
+      SELECT
         p.project_id,
         p.project_name,
         p.data_update,
@@ -27,7 +36,7 @@ export async function GET(req: Request) {
       await connection.end();
       return NextResponse.json({
         projects: [],
-        pagination: { page, limit, total: 0 },
+        pagination: { page, limit, total },
       });
     }
 
@@ -41,12 +50,12 @@ export async function GET(req: Request) {
       ORDER BY display_order ASC
     `);
 
-    // 🔹 Related collections
+    // 🔹 Related collections (✅ changed from c.type -> c.collection_name)
     const [collections] = await connection.query(`
-      SELECT 
+      SELECT
         pc.project_id,
         c.collection_id,
-        c.type
+        c.collection_name
       FROM project_collections pc
       LEFT JOIN collections c ON pc.collection_id = c.collection_id
       WHERE pc.project_id IN (${projectIds.join(',')})
@@ -67,13 +76,13 @@ export async function GET(req: Request) {
         .filter((c) => c.project_id === p.project_id)
         .map((c) => ({
           collection_id: c.collection_id,
-          type: c.type,
+          collection_name: c.collection_name,
         })),
     }));
 
     return NextResponse.json({
       projects: result,
-      pagination: { page, limit, total: result.length },
+      pagination: { page, limit, total },
     });
   } catch (error: any) {
     console.error('Error fetching project commercial:', error);

@@ -137,10 +137,10 @@ export default function ProductFocusPage() {
           focus_id: editingFocus.focus_id,
           ...values,
         });
-        message.success('Product Focus updated successfully!');
+        message.success('Signature Collection (Stock) updated successfully!');
       } else {
         await axios.post('/api/admin/homefocus', values);
-        message.success('Product Focus created successfully!');
+        message.success('Signature Collection (Stock) created successfully!');
       }
 
       mutate();
@@ -296,9 +296,9 @@ export default function ProductFocusPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={2}>Product Focus Management</Title>
+        <Title level={2}>Signature Collection (Stock) Management</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-          Add Product Focus
+          Add Signature Collection (Stock)
         </Button>
       </div>
 
@@ -309,7 +309,7 @@ export default function ProductFocusPage() {
           Add/Edit Focus Modal
          ========================= */}
       <Modal
-        title={editingFocus ? 'Edit Product Focus' : 'Add Product Focus'}
+        title={editingFocus ? 'Edit Signature Collection (Stock)' : 'Add Signature Collection (Stock)'}
         open={isModalOpen}
         onOk={handleOk}
         onCancel={() => {

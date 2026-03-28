@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Table,
   Button,
@@ -14,29 +14,37 @@ import {
   Typography,
   Image,
   Popconfirm,
-  Tag,
   Upload,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import type { InputRef } from 'antd';
+import type { ColumnsType, ColumnType } from 'antd/es/table';
+import type { FilterConfirmProps } from 'antd/es/table/interface';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  UploadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import useSWR from 'swr';
 import axios from 'axios';
 
 const { Title } = Typography;
-const { TextArea } = Input;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Collection {
   collection_id: number;
   collection_name: string;
-  material_type: string;
-  brand_name: string;
   type: 'Surface' | 'Furniture' | 'Other';
+  brand_id: number; // ✅ important (API needs brand_id)
+  brand_name: string;
+  material_type: string;
   status: boolean;
   description: string;
   image: string;
   link: string;
   relate_link: string;
-  created_at: string;
+  created_at?: string;
 }
 
 interface Brand {
@@ -44,20 +52,35 @@ interface Brand {
   brand_name: string;
 }
 
+type DataIndex = keyof Collection;
+
 export default function CollectionsPage() {
-  const { data, error, mutate } = useSWR<Collection[]>('/api/admin/collection', fetcher);
-  const { data: brands } = useSWR<Brand[]>('/api/admin/brand', fetcher);
+  // ✅ use ONE endpoint for CRUD (matches your route.ts)
+  const API = '/api/admin/collection';
+
+  const { data, error, mutate } = useSWR<Collection[]>(API, fetcher);
+  const { data: brandData } = useSWR<Brand[]>('/api/admin/brand', fetcher);
+
+  const collections: Collection[] = Array.isArray(data) ? data : [];
+  const brands: Brand[] = Array.isArray(brandData)
+    ? [...brandData].sort((a, b) => a.brand_name.localeCompare(b.brand_name))
+    : [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [editing, setEditing] = useState<Collection | null>(null);
   const [form] = Form.useForm();
+
   const [uploading, setUploading] = useState(false);
 
-  const collections = Array.isArray(data) ? data : [];
+  // column search
+  const [searchText, setSearchText] = useState('');
+  const [searchedColumn, setSearchedColumn] = useState<DataIndex | ''>('');
+  const searchInput = useRef<InputRef>(null);
 
+  // ✅ Upload image to /api/admin/upload
   const handleUpload = async (file: File) => {
-    setUploading(true);
     try {
+      setUploading(true);
       const formData = new FormData();
       formData.append('file', file);
 
@@ -65,160 +88,269 @@ export default function CollectionsPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const filePath = res.data.filePath;
-      form.setFieldValue('image', filePath);
-      message.success('Image uploaded successfully!');
-      return filePath;
-    } catch (error) {
-      message.error('Upload failed');
-      console.error('Upload error:', error);
-    } finally {
       setUploading(false);
+      return res.data.filePath as string;
+    } catch (e) {
+      console.error(e);
+      setUploading(false);
+      message.error('Upload failed!');
+      return '';
     }
   };
 
-  const showModal = (collection?: Collection) => {
-    if (collection) {
-      setEditingCollection(collection);
-      form.setFieldsValue(collection);
+  const showModal = (record?: Collection) => {
+    if (record) {
+      setEditing(record);
+      // ✅ make sure form uses brand_id, not brand_name
+      form.setFieldsValue({
+        ...record,
+        brand_id: record.brand_id,
+      });
     } else {
-      setEditingCollection(null);
+      setEditing(null);
       form.resetFields();
-      form.setFieldsValue({ status: true });
+      form.setFieldsValue({
+        status: true,
+        type: 'Surface',
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleOk = async () => {
+  const handleSave = async () => {
     try {
-      await form.validateFields();
+      const values = await form.validateFields();
 
-      // ✅ วิธีที่ 1: สร้าง payload แบบ manual (แนะนำที่สุด)
-      const formValues = form.getFieldsValue();
-
-      const payload = {
-        collection_name: formValues.collection_name,
-        type: formValues.type,
-        brand_id: formValues.brand_id,
-        material_type: formValues.material_type,
-        status: formValues.status ?? true,
-        description: formValues.description || '',
-        image: formValues.image || '',
-        link: formValues.link || '',
-        relate_link: formValues.relate_link || '',
-      };
-
-      console.log('🔍 Payload being sent:', payload);
-      console.log('🔍 All form values:', formValues);
-
-      if (editingCollection) {
-        await axios.put('/api/admin/collection', {
-          collection_id: editingCollection.collection_id,
-          ...payload
+      if (editing) {
+        await axios.put(API, {
+          collection_id: editing.collection_id,
+          ...values,
         });
-        message.success('Collection updated successfully!');
+        message.success('Collection updated!');
       } else {
-        await axios.post('/api/admin/collection', payload);
-        message.success('Collection created successfully!');
+        await axios.post(API, values);
+        message.success('Collection created!');
       }
 
       mutate();
       setIsModalOpen(false);
       form.resetFields();
-    } catch (error: any) {
-      console.error('❌ Error saving collection:', error);
-      console.error('❌ Error response:', error.response?.data);
-      message.error('Failed to save: ' + (error.response?.data?.error || error.message));
+    } catch (e) {
+      console.error(e);
+      message.error('Save failed!');
     }
   };
 
   const handleDelete = async (collection_id: number) => {
     try {
-      await axios.delete('/api/admin/collection', { data: { collection_id } });
-      message.success('Collection deleted successfully!');
+      await axios.delete(API, { data: { collection_id } });
+      message.success('Deleted!');
       mutate();
-    } catch (error: any) {
-      console.error('❌ Error deleting:', error);
-      message.error('Failed to delete: ' + (error.response?.data?.error || error.message));
+    } catch (e) {
+      console.error(e);
+      message.error('Delete failed!');
     }
   };
 
-  const columns = [
+  // ✅ column search helper
+  const getColumnSearchProps = (dataIndex: DataIndex): ColumnType<Collection> => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={`Search ${String(dataIndex)}`}
+          value={(selectedKeys[0] as string) || ''}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => {
+            confirm();
+            setSearchText((selectedKeys[0] as string) || '');
+            setSearchedColumn(dataIndex);
+          }}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            icon={<SearchOutlined />}
+            size="small"
+            onClick={() => {
+              confirm();
+              setSearchText((selectedKeys[0] as string) || '');
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Search
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              clearFilters?.();
+              setSearchText('');
+              setSearchedColumn('');
+              confirm({ closeDropdown: false } as FilterConfirmProps);
+            }}
+          >
+            Reset
+          </Button>
+          <Button size="small" type="link" onClick={() => close()}>
+            Close
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered: boolean) => (
+      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const v = String(value || '').toLowerCase();
+      const field = String(record[dataIndex] ?? '').toLowerCase();
+      return field.includes(v);
+    },
+    onFilterDropdownOpenChange: (visible) => {
+      if (visible) setTimeout(() => searchInput.current?.select?.(), 100);
+    },
+  });
+
+  // quick filters from data
+  const brandFilters = useMemo(() => {
+    const uniq = Array.from(new Set(collections.map((c) => c.brand_name).filter(Boolean))).sort();
+    return uniq.map((b) => ({ text: b, value: b }));
+  }, [collections]);
+
+  const materialFilters = useMemo(() => {
+    const uniq = Array.from(new Set(collections.map((c) => c.material_type).filter(Boolean))).sort();
+    return uniq.map((m) => ({ text: m, value: m }));
+  }, [collections]);
+
+  const columns: ColumnsType<Collection> = [
     {
       title: 'ID',
       dataIndex: 'collection_id',
-      width: 60,
-      sorter: (a: Collection, b: Collection) => a.collection_id - b.collection_id,
+      key: 'collection_id',
+      width: 80,
+      sorter: (a, b) => a.collection_id - b.collection_id,
     },
     {
-      title: 'Collection Name',
+      title: 'Image',
+      dataIndex: 'image',
+      key: 'image',
+      width: 110,
+      render: (url: string) =>
+        url ? (
+          <Image
+            src={url}
+            alt="collection"
+            width={70}
+            height={50}
+            style={{ objectFit: 'cover' }}
+          />
+        ) : (
+          <span>No Image</span>
+        ),
+    },
+    {
+      title: 'Name',
       dataIndex: 'collection_name',
-      sorter: (a: Collection, b: Collection) => a.collection_name.localeCompare(b.collection_name),
-    },
-    {
-      title: 'Item',
-      dataIndex: 'material_type'
+      key: 'collection_name',
+      ...getColumnSearchProps('collection_name'),
     },
     {
       title: 'Brand',
-      dataIndex: 'brand_name'
+      dataIndex: 'brand_name',
+      key: 'brand_name',
+      filters: brandFilters,
+      onFilter: (value, record) => record.brand_name === value,
+      sorter: (a, b) => (a.brand_name || '').localeCompare(b.brand_name || ''),
+    },
+    {
+      title: 'Material',
+      dataIndex: 'material_type',
+      key: 'material_type',
+      filters: materialFilters,
+      onFilter: (value, record) => record.material_type === value,
     },
     {
       title: 'Type',
       dataIndex: 'type',
-      render: (val: string) => {
-        const color = val === 'Surface' ? 'blue' : val === 'Furniture' ? 'green' : 'orange';
-        return <Tag color={color}>{val}</Tag>;
-      },
+      key: 'type',
       filters: [
         { text: 'Surface', value: 'Surface' },
         { text: 'Furniture', value: 'Furniture' },
         { text: 'Other', value: 'Other' },
       ],
-      onFilter: (value: any, record: Collection) => record.type === value,
+      onFilter: (value, record) => record.type === value,
     },
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (val: boolean) => (
-        <Tag color={val ? 'green' : 'red'}>
-          {val ? 'Active' : 'Inactive'}
-        </Tag>
-      ),
+      key: 'status',
+      width: 110,
+      filters: [
+        { text: 'Active', value: '1' },
+        { text: 'Inactive', value: '0' },
+      ],
+      onFilter: (value, record) => (record.status ? '1' : '0') === String(value),
+      render: (val: boolean) => <Switch checked={!!val} disabled />,
     },
     {
-      title: 'Image',
-      dataIndex: 'image',
-      render: (url: string) => (
+      title: 'Link',
+      dataIndex: 'link',
+      key: 'link',
+      width: 200,
+      ...getColumnSearchProps('link'),
+      render: (url: string) =>
         url ? (
-          <Image
-            src={url}
-            width={70}
-            height={40}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            preview={{ src: url }}
-          />
+          <a href={url} target="_blank" rel="noopener noreferrer" title={url}>
+            {url.length > 17 ? url.substring(0, 17) + '...' : url}
+          </a>
         ) : (
-          <span style={{ color: '#999' }}>No image</span>
-        )
-      ),
+          '-'
+        ),
     },
+    {
+      title: 'Relate',
+      dataIndex: 'relate_link',
+      key: 'relate_link',
+      width: 200,
+      ...getColumnSearchProps('relate_link'),
+      render: (url: string) =>
+        url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" title={url}>
+            {url.length > 17 ? url.substring(0, 17) + '...' : url}
+          </a>
+        ) : (
+          '-'
+        ),
+    },
+
+    // ✅ Description = second last column (ก่อน Actions)
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      ...getColumnSearchProps('description'),
+      ellipsis: true,
+      width: 260,
+    },
+
+    // ✅ Actions = LAST column
     {
       title: 'Actions',
-      width: 120,
+      key: 'actions',
+      width: 150,
       render: (_: any, record: Collection) => (
         <Space>
           <Button
+            type="primary"
             icon={<EditOutlined />}
-            onClick={() => showModal(record)}
             size="small"
+            onClick={() => showModal(record)}
           />
           <Popconfirm
             title="Delete this collection?"
-            description="This action cannot be undone."
-            onConfirm={() => handleDelete(record.collection_id)}
             okText="Yes"
             cancelText="No"
+            onConfirm={() => handleDelete(record.collection_id)}
           >
             <Button danger icon={<DeleteOutlined />} size="small" />
           </Popconfirm>
@@ -227,167 +359,104 @@ export default function CollectionsPage() {
     },
   ];
 
+  if (error) return <div>Failed to load</div>;
+
   return (
-    <div style={{ padding: '24px' }}>
+    <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0 }}>Collections Management</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-          size="large"
-        >
+        <Title level={2}>Collections Management</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
           Add Collection
         </Button>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={collections}
-        rowKey="collection_id"
-        loading={!data && !error}
-        pagination={{ pageSize: 10 }}
-      />
+      <Table columns={columns} dataSource={collections} rowKey="collection_id" />
 
       <Modal
-        title={editingCollection ? 'Edit Collection' : 'Add New Collection'}
+        title={editing ? 'Edit Collection' : 'Add Collection'}
         open={isModalOpen}
-        onOk={handleOk}
+        onOk={handleSave}
         onCancel={() => {
           setIsModalOpen(false);
           form.resetFields();
         }}
-        width={600}
-        okText="Save"
-        cancelText="Cancel"
+        width={700}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
+        <Form form={form} layout="vertical">
+          <Form.Item label="Status" name="status" valuePropName="checked">
+            <Switch />
+          </Form.Item>
 
           <Form.Item
             label="Collection Name"
             name="collection_name"
-            rules={[{ required: true, message: 'Please enter collection name' }]}
+            rules={[{ required: true, message: 'Please input collection name!' }]}
           >
-            <Input placeholder="Enter collection name" size="large" />
+            <Input />
           </Form.Item>
 
-          <Form.Item
-            label="Item"
-            name="material_type"
-            rules={[{ required: true, message: 'Item Name in Collection' }]}
-          >
-            <Input placeholder="Nero Marquina , EY09 Gold Catalan , Ivory" size="large" />
-          </Form.Item>
-
-          <Form.Item
-            label="Brand"
-            name="brand_id"
-            rules={[{ required: true, message: 'Please select a brand' }]}
-          >
-            <Select placeholder="Select a brand" size="large">
-              {brands?.map((b) => (
-                <Select.Option key={b.brand_id} value={b.brand_id}>
+          {/* ✅ IMPORTANT: use brand_id (number) */}
+          <Form.Item label="Brand" name="brand_id" rules={[{ required: true }]}>
+            <Select showSearch optionFilterProp="label" placeholder="Select brand">
+              {brands.map((b) => (
+                <Select.Option key={b.brand_id} value={b.brand_id} label={b.brand_name}>
                   {b.brand_name}
                 </Select.Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="Type"
-            name="type"
-            rules={[{ required: true, message: 'Please select type' }]}
-          >
-            <Select placeholder="Select type" size="large">
+          <Form.Item label="Material Type" name="material_type" rules={[{ required: true }]}>
+            <Input placeholder="e.g., Porcelain, Ceramic, Wood" />
+          </Form.Item>
+
+          <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+            <Select>
               <Select.Option value="Surface">Surface</Select.Option>
               <Select.Option value="Furniture">Furniture</Select.Option>
               <Select.Option value="Other">Other</Select.Option>
             </Select>
           </Form.Item>
 
-          <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch
-              checkedChildren="Active"
-              unCheckedChildren="Inactive"
-              defaultChecked
-            />
+          <Form.Item label="Image" name="image" rules={[{ required: true, message: 'Please upload image!' }]}>
+            <Upload
+              name="file"
+              listType="picture"
+              customRequest={async ({ file, onSuccess }) => {
+                const path = await handleUpload(file as File);
+                form.setFieldValue('image', path);
+                onSuccess && onSuccess('ok');
+              }}
+              showUploadList={false}
+            >
+              <Button icon={<UploadOutlined />} loading={uploading}>
+                Upload Image
+              </Button>
+            </Upload>
+
+            {form.getFieldValue('image') && (
+              <Image
+                src={form.getFieldValue('image')}
+                alt="Preview"
+                width={120}
+                style={{ marginTop: 10, borderRadius: 4 }}
+              />
+            )}
+          </Form.Item>
+
+          <Form.Item label="Link" name="link">
+            <Input placeholder="https://..." />
+          </Form.Item>
+
+          <Form.Item label="Relate Link" name="relate_link">
+            <Input placeholder="https://..." />
           </Form.Item>
 
           <Form.Item label="Description" name="description">
-            <TextArea
-              rows={3}
-              placeholder="Enter description (optional)"
-              showCount
-              maxLength={500}
-            />
+            <Input.TextArea rows={4} />
           </Form.Item>
-
-          {/* ✅ Fixed Upload Component - ไม่เพิ่ม file/fileList เข้า form */}
-          <Form.Item
-            label="Image"
-            name="image"
-            rules={[{ required: true, message: 'Please upload an image' }]}
-          >
-            <div>
-              <Upload
-                showUploadList={false}
-                beforeUpload={(file) => {
-                  // ✅ Upload แล้ว return false เพื่อไม่ให้ antd จัดการต่อ
-                  handleUpload(file);
-                  return false;
-                }}
-                accept="image/*"
-              >
-                <Button
-                  icon={<UploadOutlined />}
-                  loading={uploading}
-                  size="large"
-                >
-                  {uploading ? 'Uploading...' : 'Upload Image'}
-                </Button>
-              </Upload>
-
-              {form.getFieldValue('image') && (
-                <div style={{ marginTop: 12 }}>
-                  <Image
-                    src={form.getFieldValue('image')}
-                    alt="Preview"
-                    width={200}
-                    style={{
-                      borderRadius: 8,
-                      border: '1px solid #d9d9d9',
-                      objectFit: 'cover'
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </Form.Item>
-
-          <Form.Item label="Product Link" name="link">
-            <Input placeholder="https://example.com/product (optional)" size="large" />
-          </Form.Item>
-
-          <Form.Item label="Related Link" name="relate_link">
-            <Input placeholder="https://example.com/related (optional)" size="large" />
-          </Form.Item>
-
         </Form>
       </Modal>
-
-      {/* Preview Image */}
-      <div style={{ marginTop: 40 }}>
-        <Title level={4}>Collection Preview</Title>
-        <Image
-          src="/static/collectionpreview.png"
-          alt="Collection Preview"
-          width={900}
-          style={{
-            borderRadius: 8,
-            border: '1px solid #f0f0f0'
-          }}
-        />
-      </div>
     </div>
   );
 }
